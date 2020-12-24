@@ -22,6 +22,8 @@ SET(CMAKE_INSTALL_PREFIX $ENV{OECORE_TARGET_SYSROOT})
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing -fpermissive -rdynamic -Wl,--no-undefined" )
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -std=c++14")
+SET(CMAKE_CXX_FLAGS_DEBUG "-O0")
+SET(CMAKE_C_FLAGS_DEBUG "-O0")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(GStreamer REQUIRED)
@@ -36,6 +38,14 @@ target_link_libraries(ivas_reid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
   glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson vitis_ai_library-reid)
 install(TARGETS ivas_reid DESTINATION ${INSTALL_PATH}/lib)
+
+add_library(ivas_crop SHARED ivas_crop.cpp)
+target_include_directories(ivas_crop PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+target_link_libraries(ivas_crop
+  gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson ivasutil gstivasinfermeta-1.0)
+install(TARGETS ivas_crop DESTINATION ${INSTALL_PATH}/lib)
+
 
 
 set(VERSION "1.0.1")

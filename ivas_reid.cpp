@@ -44,13 +44,13 @@ struct _Face
 typedef struct _kern_priv
 {
     uint32_t top;
-    bool dump_frames;
     double threshold;
     std::unique_ptr<vitis::ai::Reid> det;
 } ReidKernelPriv;
 
 
-static int ivas_reid_run(const cv::Mat &image, IVASKernel *handle, int frame_num, int buf_num, int xctr, int yctr)
+static int ivas_reid_run(const cv::Mat &image, IVASKernel *handle, int frame_num, int buf_num, int xctr, int yctr,
+  int xmin, int xmax, int ymin, int ymax, double prob )
 {
     int id = 0;
     return id;
@@ -76,7 +76,6 @@ extern "C"
         else
             kernel_priv->threshold = json_number_value(val);
         kernel_priv->det = vitis::ai::Reid::create("reid");
-        printf("xx %p\n", kernel_priv->det.get());
 
         handle->kernel_priv = (void *)kernel_priv;
         return 0;
@@ -91,61 +90,66 @@ extern "C"
 
     int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */, IVASFrame *input[MAX_NUM_OBJECT], IVASFrame *output[MAX_NUM_OBJECT])
     {
-        GstIvasMeta *ivas_meta = NULL;
-        uint32_t i             = 0, n_obj;
-        IVASFrame *in_ivas_frame;
-        in_ivas_frame               = input[0];
-        IvasObjectMetadata *xva_obj = NULL;
-        GstBuffer *buffer, *buffer_crop;
-        GstMapInfo info, info_crop;
-        GstVideoMeta *vmeta, *vmeta_crop;
+        IVASFrame *in_ivas_frame = input[0];
         ReidKernelPriv *kernel_priv = (ReidKernelPriv *)handle->kernel_priv;
         static int frame_num        = 0;
-        int xctr, yctr;
         frame_num++;
 
         /* get metadata from input */
-        ivas_meta = gst_buffer_get_ivas_meta((GstBuffer *)in_ivas_frame->app_priv);
-        if (ivas_meta == NULL) {
+        GstIvasMeta *ivas_meta = gst_buffer_get_ivas_meta((GstBuffer *)in_ivas_frame->app_priv);
+        if (ivas_meta == NULL)
+        {
             return 0;
         }
-        else if (g_list_length(ivas_meta->xmeta.objects) > MAX_NUM_OBJECT) {
+        else if (g_list_length(ivas_meta->xmeta.objects) > MAX_NUM_OBJECT)
+        {
             printf("Can't process more then %d objects", MAX_NUM_OBJECT);
             return -1;
         }
-        n_obj = ivas_meta ? g_list_length(ivas_meta->xmeta.objects) : 0;
-        printf("nobj : %d\n", n_obj);
-        for (i = 0; i < n_obj; i++) {
-            xva_obj = (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
-            if (xva_obj) {
-                buffer_crop = (GstBuffer *)g_list_nth_data(xva_obj->obj_list, 0); /* original crop */
-                buffer      = (GstBuffer *)g_list_nth_data(xva_obj->obj_list, 1); /* 80x80 resized image*/
-                xctr        = xva_obj->bbox_meta.xmax - ((xva_obj->bbox_meta.xmax - xva_obj->bbox_meta.xmin) / 2);
-                yctr        = xva_obj->bbox_meta.ymax - ((xva_obj->bbox_meta.ymax - xva_obj->bbox_meta.ymin) / 2);
-            }
-            else {
+
+        uint32_t n_obj = ivas_meta ? g_list_length(ivas_meta->xmeta.objects) : 0;
+        for (uint32_t i = 0; i < n_obj; i++)
+        {
+            IvasObjectMetadata *xva_obj = (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
+
+            if (!xva_obj)
+            {
                 printf("ERROR: IVAS REID: Unable to get meta data pointer");
                 return -1;
             }
-            gst_buffer_map(buffer, &info, GST_MAP_READ);
-            gst_buffer_map(buffer_crop, &info_crop, GST_MAP_READ);
+            else
+            {
+                GstBuffer *buffer = (GstBuffer *)g_list_nth_data(xva_obj->obj_list, 0); /* resized crop image*/
+                int xctr = xva_obj->bbox_meta.xmax - ((xva_obj->bbox_meta.xmax - xva_obj->bbox_meta.xmin) / 2);
+                int yctr = xva_obj->bbox_meta.ymax - ((xva_obj->bbox_meta.ymax - xva_obj->bbox_meta.ymin) / 2);
+                GstMapInfo info;
+                gst_buffer_map(buffer, &info, GST_MAP_READ);
 
-            vmeta      = gst_buffer_get_video_meta(buffer);
-            vmeta_crop = gst_buffer_get_video_meta(buffer_crop);
-            if (!vmeta || !vmeta_crop) {
-                printf("ERROR: IVAS REID: video meta not present in buffer");
+                GstVideoMeta *vmeta = gst_buffer_get_video_meta(buffer);
+                if (!vmeta)
+                {
+                    printf("ERROR: IVAS REID: video meta not present in buffer");
+                }
+                else if (vmeta->width == 160 && vmeta->height == 80)
+                {
+                    printf("INFO %d-%d: %f, %f, %f, %f, %f\n", frame_num, i, xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymax,
+                        xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin, xva_obj->obj_prob
+                    );
+                    char *indata = (char *)info.data;
+                    cv::Mat image(vmeta->height, vmeta->width, CV_8UC3, indata);
+                    // TODO:
+                    xva_obj->obj_id = ivas_reid_run(image, handle, frame_num, i, xctr, yctr,
+                     xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.xmax,
+                     xva_obj->bbox_meta.ymin, xva_obj->bbox_meta.ymax, 
+                     xva_obj->obj_prob
+                     );
+                }
+                else
+                {
+                    printf("ERROR: IVAS REID: Invalid resolution for reid (%u x %u)\n", vmeta->width, vmeta->height);
+                }
+                gst_buffer_unmap(buffer, &info);
             }
-            else if (vmeta->width == 80 && vmeta->height == 80) {
-                char *indata = (char *)info.data;
-                cv::Mat image(vmeta->height, vmeta->width, CV_8UC3, indata);
-// TODO:
-                xva_obj->obj_id = ivas_reid_run(image, handle, frame_num, i, xctr, yctr);
-            }
-            else {
-                printf("ERROR: IVAS REID: Invalid resolution for reid (%u x %u)\n", vmeta->width, vmeta->height);
-            }
-            gst_buffer_unmap(buffer, &info);
-            gst_buffer_unmap(buffer, &info_crop);
         }
         return 0;
     }
