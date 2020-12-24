@@ -1,0 +1,12 @@
+{
+  "xclbin-location": "/usr/lib/dpu.xclbin",
+  "ivas-library-repo": "/usr/lib/ivas",
+  "element-mode": "passthrough",
+  "kernels": [
+    {
+      "library-name": "libivas_reid.so",
+      "config": {}
+    }
+  ]
+}
+

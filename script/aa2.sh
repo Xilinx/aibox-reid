@@ -12,6 +12,8 @@ filesrc location="/usr/share/somapp/movies/walking-people.nv12.30fps.1080p.h264"
   fakesink \
   t0.src_1 ! \
     scalem0.sink_slave_0 scalem0.src_slave_0 ! \
-    queue ! \
-    ivas_xfilter kernels-config="/opt/xilinx/share/ivas/kernel_boundingbox_facedetect.json"                     \
+    queue \
+    ! ivas_xfilter kernels-config="./kernel_crop.json" ! queue \
+    ! ivas_xfilter kernels-config="./kernel_reid.json" ! queue \
+    ! ivas_xfilter kernels-config="/opt/xilinx/share/ivas/kernel_boundingbox_facedetect.json" ! queue \
     ! kmssink driver-name=xlnx plane-id=39 sync=false fullscreen-overlay=true
