@@ -126,8 +126,8 @@ static int xlnx_multiscaler_descriptor_create (IVASKernel *handle,
     Mat chromaImg(input[0]->props.height / 2, input[0]->props.stride, CV_8UC1, (char *)in_ivas_frame->vaddr[1]);
 
     for (guint ind = 0; ind < roi_data.nobj; ind++) {
-        out_props.width = 160;
-        out_props.height = 80;
+        out_props.width = 80;
+        out_props.height = 160;
         out_props.fmt = IVAS_VFMT_BGR8;
         uint32_t size = FRAME_SIZE (out_props.width, out_props.height);
 

@@ -26,6 +26,7 @@
 #include <vitis/ai/nnpp/reid.hpp>
 #include <vitis/ai/reid.hpp>
 #include <vitis/ai/reidtracker.hpp>
+#include "common.hpp"
 
 #define MAX_REID 20
 #define DEFAULT_REID_THRESHOLD 0.2
@@ -43,7 +44,7 @@ struct _Face {
 typedef struct _kern_priv {
   uint32_t top;
   double threshold;
-  std::unique_ptr<vitis::ai::Reid> det;
+  std::shared_ptr<vitis::ai::Reid> det;
   std::shared_ptr<vitis::ai::ReidTracker> tracker;
 } ReidKernelPriv;
 
@@ -105,6 +106,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
   }
 
   uint32_t n_obj = ivas_meta ? g_list_length(ivas_meta->xmeta.objects) : 0;
+  m__TIC__(getfeat);
   for (uint32_t i = 0; i < n_obj; i++) {
     IvasObjectMetadata *xva_obj =
         (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
@@ -125,7 +127,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       GstVideoMeta *vmeta = gst_buffer_get_video_meta(buffer);
       if (!vmeta) {
         printf("ERROR: IVAS REID: video meta not present in buffer");
-      } else if (vmeta->width == 160 && vmeta->height == 80) {
+      } else if (vmeta->width == 80 && vmeta->height == 160) {
         printf("INFO %d-%d: %f, %f, %f, %f, %f\n", frame_num, i,
                xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymax,
                xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
@@ -137,8 +139,12 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
             cv::Rect2f(xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
                        xva_obj->bbox_meta.xmax - xva_obj->bbox_meta.xmin,
                        xva_obj->bbox_meta.ymax - xva_obj->bbox_meta.ymin);
-        input_characts.emplace_back(kernel_priv->det->run(image).feat,
-                                    input_box, xva_obj->obj_prob, -1, i);
+        m__TIC__(reidrun);
+        auto feat = kernel_priv->det->run(image).feat;
+        m__TOC__(reidrun);
+        m__TIC__(inputpush);
+        input_characts.emplace_back(feat, input_box, xva_obj->obj_prob, -1, i);
+        m__TOC__(inputpush);
         // xva_obj->obj_id = ivas_reid_run(
         //    image, handle, frame_num, i, xctr, yctr, xva_obj->bbox_meta.xmin,
         //    xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymin,
@@ -150,6 +156,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       gst_buffer_unmap(buffer, &info);
     }
   }
+  m__TOC__(getfeat);
   std::vector<vitis::ai::ReidTracker::OutputCharact> track_results =
       std::vector<vitis::ai::ReidTracker::OutputCharact>(
           kernel_priv->tracker->track(frame_num, input_characts, true, true));

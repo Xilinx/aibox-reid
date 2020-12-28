@@ -113,6 +113,7 @@ void FTD_Structure::GetOut(std::vector<OutputCharact>& output_characts) {
 std::vector<OutputCharact> FTD_Structure::Update(
     uint64_t frame_id, bool detect_flag, int mode,
     std::vector<InputCharact>& input_characts) {
+  __TIC__(update);
   remove_id_this_frame.clear();
   frame_count += 1;
 #ifdef _FTD_DEBUG_
@@ -184,7 +185,8 @@ std::vector<OutputCharact> FTD_Structure::Update(
   for (size_t i = 0; i < tracks.size(); ++i) {
     for (size_t j = 0; j < feats.size(); ++j) {
       double min_dis = 2.0;
-      for (size_t h = 0; h < tracks[i]->GetFeatures().size(); ++h) {
+      //for (size_t h = 0; h < tracks[i]->GetFeatures().size(); ++h) {
+      for (size_t h = 0; h < 1u; ++h) {
         double cdis = get_euro_dis(tracks[i]->GetFeatures()[h], feats[j]);
         // double cdis = cosine_distance(tracks[i]->GetFeatures()[h], feats[j]);
         min_dis = cdis < min_dis ? cdis : min_dis;
@@ -330,6 +332,7 @@ std::vector<OutputCharact> FTD_Structure::Update(
   }
   GetOut(output_characts);
   __TOC__(deal);
+  __TOC__(update);
   return output_characts;
 }
 

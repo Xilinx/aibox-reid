@@ -32,11 +32,11 @@ find_package(OpenCV REQUIRED COMPONENTS opencv_core opencv_video opencv_videoio 
 SET(INSTALL_PATH "opt/xilinx")
 
 
-add_library(ivas_reid SHARED ivas_reid.cpp)
+add_library(ivas_reid SHARED ivas_reid.cpp common.hpp)
 target_include_directories(ivas_reid PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(ivas_reid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson vitis_ai_library-reid vitis_ai_library-reidtracker)
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson vitis_ai_library-reid aa2_reidtracker glog pthread)
 install(TARGETS ivas_reid DESTINATION ${INSTALL_PATH}/lib)
 
 add_library(ivas_crop SHARED ivas_crop.cpp)
