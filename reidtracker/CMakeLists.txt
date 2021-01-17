@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 project(aa2_reidtracker VERSION 1.3.0 LANGUAGES C CXX)
 
-include(${CMAKE_SOURCE_DIR}/cmake/XilinxCommon.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/XilinxCommon.cmake)
 
 option(BUILD_TEST "build test" ON)
 
-include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_LIST_DIR}/cmake")
 set(INSTALL_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib)
 set(INSTALL_BIN_DIR ${CMAKE_INSTALL_PREFIX}/bin)

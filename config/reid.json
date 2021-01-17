@@ -1,6 +1,6 @@
 {
   "xclbin-location": "/usr/lib/dpu.xclbin",
-  "ivas-library-repo": "/group/xbjlab/dphi_software/software/workspace/xysheng/som/opt/petalinux/2020.2/sysroots/aarch64-xilinx-linux/opt/xilinx/lib/",
+  "ivas-library-repo": "/opt/xilinx/lib/",
   "element-mode": "passthrough",
   "kernels": [
     {

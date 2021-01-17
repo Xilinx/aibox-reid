@@ -32,5 +32,5 @@ install(
   NAMESPACE ${PROJECT_NAME}::
   DESTINATION ${INSTALL_CMAKE_DIR})
 
-install(FILES ../include/vitis/ai/reidtracker.hpp
-  DESTINATION include/vitis/ai/)
+#install(FILES ../include/vitis/ai/reidtracker.hpp
+#  DESTINATION include/vitis/ai/)

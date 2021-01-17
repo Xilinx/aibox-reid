@@ -16,9 +16,10 @@
 
 cmake_minimum_required(VERSION 3.5)
 
-project(SoMAA2)
+project(aibox_aa2)
 
 SET(CMAKE_INSTALL_PREFIX $ENV{OECORE_TARGET_SYSROOT})
+SET(CMAKE_INSTALL_PREFIX "opt/xilinx")
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing -fpermissive -rdynamic -Wl,--no-undefined" )
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -std=c++14")
@@ -32,26 +33,63 @@ find_package(OpenCV REQUIRED COMPONENTS opencv_core opencv_video opencv_videoio 
 SET(INSTALL_PATH "opt/xilinx")
 
 
-add_library(ivas_reid SHARED ivas_reid.cpp common.hpp)
+add_subdirectory(reidtracker)
+
+add_library(ivas_reid SHARED src/ivas_reid.cpp src/common.hpp)
 target_include_directories(ivas_reid PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+target_include_directories(ivas_reid PRIVATE reidtracker/include/)
 target_link_libraries(ivas_reid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
   glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson vitis_ai_library-reid aa2_reidtracker glog pthread)
 install(TARGETS ivas_reid DESTINATION ${INSTALL_PATH}/lib)
+add_dependencies(ivas_reid aa2_reidtracker)
 
-add_library(ivas_crop SHARED ivas_crop.cpp)
+add_library(ivas_crop SHARED src/ivas_crop.cpp)
 target_include_directories(ivas_crop PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(ivas_crop
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson ivasutil gstivasinfermeta-1.0)
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson ivasutil gstivasinfermeta-1.0 glog)
 install(TARGETS ivas_crop DESTINATION ${INSTALL_PATH}/lib)
 
+add_library(ivas_drawreid SHARED src/ivas_drawreid.cpp)
+target_include_directories(ivas_drawreid PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+target_link_libraries(ivas_drawreid
+  gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson ivasutil gstivasinfermeta-1.0)
+install(TARGETS ivas_drawreid DESTINATION ${INSTALL_PATH}/lib)
+
+
+add_library(ivas_pedpp SHARED src/ivas_pedpp.c)
+target_include_directories(ivas_pedpp PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+target_link_libraries(ivas_pedpp
+  jansson ivasutil gstivasinfermeta-1.0)
+install(TARGETS ivas_pedpp DESTINATION ${INSTALL_PATH}/lib)
+
+add_executable(aibox_aa2 src/main.cpp)
+target_include_directories(aibox_aa2 PRIVATE ${GSTREAMER_INCLUDE_DIRS})
+target_link_libraries(aibox_aa2 
+  gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
+  glib-2.0 gobject-2.0 )
+install(TARGETS aibox_aa2 DESTINATION ${INSTALL_PATH}/bin)
+
+
+install(PROGRAMS
+    script/aa2.sh
+    DESTINATION ${INSTALL_PATH}/bin)
+
+install(FILES
+    config/ped_pp.json
+    config/refinedet.json
+    config/crop.json
+    config/reid.json
+    config/draw_reid.json
+    DESTINATION ${INSTALL_PATH}/share/aibox_aa2)
 
 
 set(VERSION "1.0.1")
 set(CPACK_PACKAGE_VERSION ${VERSION})
 set(CPACK_GENERATOR "RPM")
-set(CPACK_PACKAGE_NAME "SoMAA2")
+set(CPACK_PACKAGE_NAME "AIbox_aa2")
 set(CPACK_PACKAGE_RELEASE 1)
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
 set(CPACK_RPM_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})

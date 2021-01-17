@@ -161,6 +161,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       std::vector<vitis::ai::ReidTracker::OutputCharact>(
           kernel_priv->tracker->track(frame_num, input_characts, true, true));
   cout << "tracker result: " << endl;
+  int i = 0;
   for (auto &r : track_results) {
     auto box = get<1>(r);
     float x = box.x;
@@ -173,6 +174,16 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
     // float score = get<2>(r);
     cout << frame_num << "," << gid << "," << xmin << "," << ymin << ","
          << xmax - xmin << "," << ymax - ymin << "\n";
+
+
+    IvasObjectMetadata *xva_obj =
+        (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
+    xva_obj->bbox_meta.xmin = x;
+    xva_obj->bbox_meta.ymin = y;
+    xva_obj->bbox_meta.xmax = xmax;
+    xva_obj->bbox_meta.ymax = ymax;
+    xva_obj->obj_id = gid;
+    i++;
   }
   return 0;
 }

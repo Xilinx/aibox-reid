@@ -7,9 +7,9 @@
       "library-name": "libivas_xpp_pipeline.so",
       "config": {
         "debug_level" : 1,
-        "mean_r": 104,
-        "mean_g": 117,
-        "mean_b": 123,
+        "mean_r": 0,
+        "mean_g": 0,
+        "mean_b": 0,
         "scale_r": 1,
         "scale_g": 1,
         "scale_b": 1
