@@ -23,11 +23,8 @@
 #include <memory>
 #include <stdexcept>
 
-static gchar* filename = (gchar*)"";
-static gchar* infileType = (gchar*)"h264";
-static gchar* outMediaType = (gchar*)"h264";
-static gchar* target = (gchar*)"dp";
-static gchar* aitask = (gchar*)"facedetect";
+static gchar** filenames = NULL;
+static gchar** rtspaddrs = NULL;
 static gint   fr = 30;
 static gint mipi = -1;
 static gint usb = -1;
@@ -38,14 +35,14 @@ static gboolean reportFps = FALSE;
 static gboolean roiOff = FALSE;
 static GOptionEntry entries[] =
 {
-    { "mipi", 'm', 0, G_OPTION_ARG_INT, &mipi, "mipi media id, e.g. 1 for /dev/media1", "media_ID"},
+    { "rtsp", 't', 0, G_OPTION_ARG_STRING_ARRAY, &rtspaddrs, "rtsp stream addr", "rtsp uri, multiple"},
+    { "file", 'f', 0, G_OPTION_ARG_STRING_ARRAY, &filenames, "location of h26x file as input", "file path"},
     { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
     { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
     { "framerate", 'r', 0, G_OPTION_ARG_INT, &fr, "framerate of the input", "30"},
 
     { "nodet", 'n', 0, G_OPTION_ARG_NONE, &nodet, "no AI inference", NULL },
     { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "report fps", NULL },
-    { "ROI-off", 0, 0, G_OPTION_ARG_NONE, &roiOff, "turn off ROI", NULL },
     { NULL }
 };
 
@@ -110,23 +107,56 @@ main (int argc, char *argv[])
 
     char *perf = (char*)"";
 
-    sprintf(pip + strlen(pip),
-            " \
-            filesrc location=\"/usr/share/somapp/movies/walking-people.nv12.30fps.1080p.h264\" \
-            ! h264parse ! queue ! omxh264dec internal-entropy-buffers=3 \
-            ! video/x-raw, format=NV12 \
-            ! tee name=t0 t0.src_0 ! queue \
-            ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
-            ! queue ! ivas_xfilter name=refinedet kernels-config=\"%s/refinedet.json\" \
-            ! queue ! ivas_xfilter name=crop      kernels-config=\"%s/crop.json\" \
-            ! queue ! ivas_xfilter kernels-config=\"%s/reid.json\" \
-            ! queue ! scalem0.sink_master ivas_xmetaaffixer name=scalem0 scalem0.src_master \
-            ! fakesink \
-            t0.src_1 \
-            ! queue ! scalem0.sink_slave_0 scalem0.src_slave_0 \
-            ! queue ! ivas_xfilter kernels-config=\"%s/draw_reid.json\" \
-            ! queue ! kmssink driver-name=xlnx plane-id=39 sync=false fullscreen-overlay=true \
-            ", confdir.c_str(), confdir.c_str() ,confdir.c_str() ,confdir.c_str() ,confdir.c_str());
+    char *rtspsrc = NULL, *filesrc = NULL;
+    int indr = 0, indf = 0;
+    for (int i = 0; i < 4; i++) 
+    {
+        std::ostringstream srcOss;
+        if (rtspaddrs)
+        {
+            rtspsrc = rtspaddrs[indr++];
+            if (!rtspsrc)
+            {
+                i--;
+                continue;
+            }
+            else
+            {
+                srcOss << "rtspsrc location=\"" << rtspsrc << "\" ! queue ! rtph264depay ! queue ";
+            }
+        }
+        else if (filenames)
+        {
+            filesrc = filenames[indf++];
+            if (!filesrc)
+            {
+                break;
+            }
+            else
+            {
+                srcOss << "filesrc location=\"" << filesrc << "\"";
+            }
+        }
+
+        sprintf(pip + strlen(pip),
+                " %s \
+                ! h264parse ! queue ! omxh264dec internal-entropy-buffers=3 \
+                ! video/x-raw, format=NV12 \
+                ! tee name=t0 t0.src_0 ! queue \
+                ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
+                ! queue ! ivas_xfilter name=refinedet kernels-config=\"%s/refinedet.json\" \
+                ! queue ! ivas_xfilter name=crop      kernels-config=\"%s/crop.json\" \
+                ! queue ! ivas_xfilter kernels-config=\"%s/reid.json\" \
+                ! queue ! scalem0.sink_master ivas_xmetaaffixer name=scalem0 scalem0.src_master \
+                ! fakesink \
+                t0.src_1 \
+                ! queue ! scalem0.sink_slave_0 scalem0.src_slave_0 \
+                ! queue ! ivas_xfilter kernels-config=\"%s/draw_reid.json\" \
+                ! queue ! %s \
+                ", srcOss.str().c_str(), confdir.c_str(), confdir.c_str() ,confdir.c_str() ,confdir.c_str() ,confdir.c_str()
+                , (i==0) ? "kmssink driver-name=xlnx plane-id=39 sync=false fullscreen-overlay=true" : "fakesink"
+               );
+    }
 
     GstElement *pipeline = gst_parse_launch(pip, NULL);
     gst_element_set_state (pipeline, GST_STATE_PLAYING);
