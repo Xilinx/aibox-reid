@@ -1,0 +1,34 @@
+/******************************************************************************
+* Copyright (C) 2010 - 2020 Xilinx, Inc. All rights reserved.
+* SPDX-License-Identifier: Apache-2.0
+******************************************************************************/
+
+
+1. Development Guide:
+   If you want to build from source, follow next steps, otherwise skip this section.
+
+   1) Install the SoM sdk.sh to the path you choose or default. Suppose SDKPATH.
+   2) Run "./build.sh ${SDKPATH}" to build the somapp application.
+   3) The build process in 2) will produce a rpm package SoMApp-1.0.1-1.aarch64.rpm under build/, upload to the board,
+      and run "rmp -ivh --force ./AIbox_aa2-1.0.1-1.aarch64.rpm" to update install.
+
+2. File structure:
+    The application is installed as:
+        Binary File: => /opt/xilinx/bin
+                                        aibox_aa2                               main app
+
+        configuration File: => /opt/xilinx/share/ivas
+                                        kernel_boundingbox_facedetect.json
+                                        kernel_densebox_640_360.json
+                                        kernel_xpp_pipeline.json
+
+3. How to run application:
+    0) Prerequisites:
+       a) Monitor:
+          Before booting the board, please connect the monitor to the board via either DP or HDMI port.
+       b) RTSP server:
+          smartcam_aa1 can be used as the RTSP server, with -n option, which turn off the server side AI inference.
+
+    1) MIPI RTSP server:
+
+    2) MIPI DP display
