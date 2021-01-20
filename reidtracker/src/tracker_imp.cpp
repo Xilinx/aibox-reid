@@ -22,7 +22,7 @@
 namespace vitis {
 namespace ai {
 
-ReidTrackerImp::ReidTrackerImp(uint64_t mode, const SpecifiedCfg& cfg) {
+ReidTrackerImp::ReidTrackerImp(uint64_t mode, const SpecifiedCfg &cfg) {
   mode_ = mode;
   ftd_ = new FTD_Structure(cfg);
   if (mode & MODE_MULTIDETS) {
@@ -67,7 +67,7 @@ std::vector<OutputCharact> ReidTrackerImp::patchFrame(const uint64_t frame_id) {
 }
 
 std::vector<OutputCharact> ReidTrackerImp::track(
-    const uint64_t frame_id, std::vector<InputCharact>& input_characts,
+    const uint64_t frame_id, std::vector<InputCharact> &input_characts,
     const bool is_detection, const bool is_normalized) {
   std::vector<OutputCharact> det_track;
   if (mode_ & MODE_MULTIDETS) {
@@ -141,7 +141,7 @@ bool ReidTrackerImp::releaseTrackLock(int frame_id) {
 }
 
 std::vector<OutputCharact> ReidTrackerImp::trackWithoutLock(
-    const uint64_t frame_id, std::vector<InputCharact>& input_characts,
+    const uint64_t frame_id, std::vector<InputCharact> &input_characts,
     const bool is_detection, const bool is_normalized) {
   if (mode_ & MODE_MULTIDETS) {
     // Track for the missing frames between (last_tracked_id, frame_id)
@@ -164,7 +164,7 @@ std::vector<OutputCharact> ReidTrackerImp::trackWithoutLock(
 };
 
 std::vector<OutputCharact> ReidTrackerImp::trackWithLock(
-    const uint64_t frame_id, std::vector<InputCharact>& input_characts,
+    const uint64_t frame_id, std::vector<InputCharact> &input_characts,
     const bool is_detection, const bool is_normalized) {
   std::vector<OutputCharact> det_track;
   if (mode_ & MODE_MULTIDETS) {

@@ -39,8 +39,8 @@ namespace ai {
 
 class ReidTracker {
  public:
-  /// InputCharact: feat, bbox, score, label, local_id
-  typedef std::tuple<cv::Mat, cv::Rect_<float>, float, int, int> InputCharact;
+  /// InputCharact: bbox, score, label, local_id, crop_img
+  typedef std::tuple<cv::Rect_<float>, float, int, int, cv::Mat> InputCharact;
   /// OutputCharact: gid, bbox, score, label, local_id
   typedef std::tuple<uint64_t, cv::Rect_<float>, float, int, int> OutputCharact;
   typedef std::tuple<std::array<int, 4>, std::array<int, 3>> SpecifiedCfg;

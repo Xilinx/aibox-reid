@@ -33,7 +33,9 @@
 #include <tuple>
 #include <vector>
 
+#include <vitis/ai/refinedet.hpp>
 #include <vitis/ai/reidtracker.hpp>
+#include "../src/common.hpp"
 
 using namespace cv;
 using namespace vitis::ai;
@@ -70,8 +72,16 @@ vector<Mat> read_imgs;
 void reader() {
   for (size_t i = 0; i < images.size(); ++i) {
     string imageName = images[i];
+    Mat img = imread(baseImagePath + "/img1/" + imageName);
+    resize(img, img, Size(480, 360));
+    read_imgs.emplace_back(img);
+  }
+  cout << "read end " << endl;
+  for (size_t i = 0; i < images.size(); ++i) {
+    string imageName = images[i];
     if (queueInput.size() < 30) {
-      Mat img = imread(baseImagePath + "/img1/" + imageName);
+      Mat img;
+      read_imgs[i].copyTo(img);
       mtxQueueInput.lock();
       queueInput.push(make_pair(idxInputImage++, img));
       mtxQueueInput.unlock();
@@ -82,6 +92,8 @@ void reader() {
     }
     while (queueInput.size() >= 30) usleep(1000);
   }
+  cout << "##############################video end, count: " << imgCount
+       << endl;
   usleep(20000000);
 }
 
@@ -93,7 +105,11 @@ string num2str(int i) {
 
 void displayImage() {
   Mat img;
+  // VideoWriter writer;
   int imgcount = 1;
+  // writer.open("results.avi", CV_FOURCC('M', 'J', 'P', 'G'), 15, Size(960,
+  // 540),
+  //            true);
   while (true) {
     mtxQueueShow.lock();
     if (queueShow.empty()) {
@@ -107,12 +123,25 @@ void displayImage() {
       buffer << fixed << setprecision(2)
              << (float)imgcount / (dura / 1000000.f);
       string a = buffer.str() + "FPS";
-      // cout<<a<<endl;
+      cout << a << endl;
+      resize(img, img, Size(960, 540));
+      cv::putText(img, a, cv::Point(10, 15), 1, 1, cv::Scalar{240, 240, 240},
+                  1);
       cv::putText(img, to_string(queueShow.top().first), cv::Point(10, 1000), 1,
                   3, cv::Scalar{240, 240, 240}, 2);
+      // resize(img, img, Size(720, 480));0
+      // writer.write(img);
+      // cv::imwrite(num2str(queueShow.top().first) + ".jpg", img);  // display
+      // image moveWindow("reidvideo", 0, 0); cv::imshow("reidvideo", img);  //
+      // display image waitKey(40);
+      if (queueShow.top().first == imgCount) {
+        // writer.release();
+        exit(1);
+      }
+
       idxShowImage++;
       imgcount++;
-      // cout<<"idx show: "<<idxShowImage<<endl;
+      cout << "idx show: " << idxShowImage << endl;
       if (idxShowImage == (imgCount + 1)) {
         exit(0);
         idxShowImage = 1;
@@ -127,30 +156,10 @@ void displayImage() {
 
 void run() {
   auto tracker = vitis::ai::ReidTracker::create();
-  vector<vector<vector<float>>> dets(
-      imgCount + 1, vector<vector<float>>(0, vector<float>(7)));
-  ifstream inf(baseImagePath + "/det.txt");
-  if (!inf) {
-    cerr << "open file error, path: " << baseImagePath << "/det.txt" << endl;
-  }
-  string str;
-  while (getline(inf, str)) {
-    istringstream ss(str);
-    vector<float> tmp;
-    float tmp_a;
-    while (ss >> tmp_a) {
-      tmp.emplace_back(tmp_a);
-    }
-    dets[tmp[0]].emplace_back(tmp);
-  }
-  inf.close();
-  if (dets[1].size() == 0) {
-    cerr << "no detection !" << endl;
-    exit(0);
-  }
+  auto det = vitis::ai::RefineDet::create("refinedet_pruned_0_96");
   std::vector<vitis::ai::ReidTracker::InputCharact> input_characts;
   string outfile =
-      "MOT-" + baseImagePath.substr(baseImagePath.size() - 3, 2) + ".txt";
+      "result" + baseImagePath.substr(baseImagePath.size() - 3, 2) + ".txt";
   ofstream of(outfile);
   while (1) {
     pair<int, Mat> pairIndexImage;
@@ -170,21 +179,25 @@ void run() {
     Mat image = pairIndexImage.second;
     int frame_id = pairIndexImage.first;
     if (frame_id == 1) tracker = vitis::ai::ReidTracker::create();
-    // auto results = det->run(image);
-    vector<vector<float>> results;
-    results = dets[frame_id];
+    __TIC__(refinedet)
+    auto results = det->run(image);
+    __TOC__(refinedet)
     input_characts.clear();
     int lid = 0;
-    auto roi_img = cv::Rect_<float>(0, 0, image.cols, image.rows);
-    for (auto box : results) {
-      Rect2f crop_box = Rect2f(box[2], box[3], box[4], box[5]);
-      crop_box &= roi_img;
-      cv::Mat img = image(crop_box);
-      input_characts.emplace_back(crop_box, box[6], -1, lid++, img);
+    for (auto box : results.bboxes) {
+      Rect2f in_box = Rect2f(box.x * image.cols, box.y * image.rows,
+                             box.width * image.cols, box.height * image.rows);
+      Mat img = image(in_box);
+      input_characts.emplace_back(in_box, box.score, -1, lid++, img);
     }
+    // input_characts.resize(3);
+    __TIC__(track)
     std::vector<vitis::ai::ReidTracker::OutputCharact> track_results =
         std::vector<vitis::ai::ReidTracker::OutputCharact>(
             tracker->track(frame_id, input_characts, true, true));
+    __TOC__(track)
+    __TIC__(deallater)
+    cout << "frame_id: " << frame_id << endl;
     for (auto &r : track_results) {
       auto box = get<1>(r);
       float x = box.x;
@@ -201,22 +214,19 @@ void run() {
       // float score = get<2>(r);
       of << frame_id << "," << gid << "," << xmin << "," << ymin << ","
          << xmax - xmin << "," << ymax - ymin << ",1,-1,-1,-1\n";
-      // cout << "RESULT: "
-      //          << "\t" << xmin << "\t" << ymin << "\t" << xmax << "\t" <<
-      //          ymax
-      //          << "\t" << gid << "\n";
+      cout << "RESULT: "
+           << "\t" << xmin << "\t" << ymin << "\t" << xmax << "\t" << ymax
+           << "\t" << gid << "\n";
       cv::rectangle(image, cv::Point(xmin, ymin), cv::Point(xmax, ymax),
                     cv::Scalar(255, 0, 0), 2, 1, 0);
       cv::putText(image, to_string(gid), cv::Point(xmin, ymin), 1, 2,
                   cv::Scalar{0, 0, 255}, 2);
     }
+    __TOC__(deallater)
     if (frame_id == imgCount) {
       cout << "##########################finsh : " << frame_id << endl;
-      cout << " ByeBye " << endl;
       of.close();
-      // exit(0);
     }
-    // cv::imwrite("result.jpg", image);
     pairIndexImage.second = image;
     mtxQueueShow.lock();
     // Put the processed iamge to show queue
@@ -226,6 +236,7 @@ void run() {
 }
 
 int main(int argc, char **argv) {
+  google::InitGoogleLogging(argv[0]);
   if (argc != 2) {
     cout << "Please set input image. " << endl;
     return 0;

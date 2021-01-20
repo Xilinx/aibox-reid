@@ -44,7 +44,6 @@ struct _Face {
 typedef struct _kern_priv {
   uint32_t top;
   double threshold;
-  std::shared_ptr<vitis::ai::Reid> det;
   std::shared_ptr<vitis::ai::ReidTracker> tracker;
 } ReidKernelPriv;
 
@@ -73,7 +72,6 @@ int32_t xlnx_kernel_init(IVASKernel *handle) {
     kernel_priv->threshold = DEFAULT_REID_THRESHOLD;
   else
     kernel_priv->threshold = json_number_value(val);
-  kernel_priv->det = vitis::ai::Reid::create("reid");
   kernel_priv->tracker = vitis::ai::ReidTracker::create();
 
   handle->kernel_priv = (void *)kernel_priv;
@@ -106,7 +104,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
   }
 
   uint32_t n_obj = ivas_meta ? g_list_length(ivas_meta->xmeta.objects) : 0;
-  m__TIC__(getfeat);
+  m__TIC__(getinput);
   for (uint32_t i = 0; i < n_obj; i++) {
     IvasObjectMetadata *xva_obj =
         (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
@@ -128,10 +126,10 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       if (!vmeta) {
         printf("ERROR: IVAS REID: video meta not present in buffer");
       } else if (vmeta->width == 80 && vmeta->height == 160) {
-        printf("INFO %d-%d: %f, %f, %f, %f, %f\n", frame_num, i,
-               xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymax,
-               xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
-               xva_obj->obj_prob);
+        // printf("INFO %d-%d: %f, %f, %f, %f, %f\n", frame_num, i,
+        //       xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymax,
+        //       xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
+        //       xva_obj->obj_prob);
         char *indata = (char *)info.data;
         cv::Mat image(vmeta->height, vmeta->width, CV_8UC3, indata);
         // TODO:
@@ -139,12 +137,8 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
             cv::Rect2f(xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
                        xva_obj->bbox_meta.xmax - xva_obj->bbox_meta.xmin,
                        xva_obj->bbox_meta.ymax - xva_obj->bbox_meta.ymin);
-        m__TIC__(reidrun);
-        auto feat = kernel_priv->det->run(image).feat;
-        m__TOC__(reidrun);
-        m__TIC__(inputpush);
-        input_characts.emplace_back(feat, input_box, xva_obj->obj_prob, -1, i);
-        m__TOC__(inputpush);
+        input_characts.emplace_back(input_box, xva_obj->obj_prob, -1, i,
+                                    image.clone());
         // xva_obj->obj_id = ivas_reid_run(
         //    image, handle, frame_num, i, xctr, yctr, xva_obj->bbox_meta.xmin,
         //    xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymin,
@@ -156,10 +150,12 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       gst_buffer_unmap(buffer, &info);
     }
   }
-  m__TOC__(getfeat);
+  m__TOC__(getinput);
+  m__TIC__(Track);
   std::vector<vitis::ai::ReidTracker::OutputCharact> track_results =
       std::vector<vitis::ai::ReidTracker::OutputCharact>(
           kernel_priv->tracker->track(frame_num, input_characts, true, true));
+  m__TOC__(Track);
   cout << "tracker result: " << endl;
   int i = 0;
   for (auto &r : track_results) {
@@ -174,7 +170,6 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
     // float score = get<2>(r);
     cout << frame_num << "," << gid << "," << xmin << "," << ymin << ","
          << xmax - xmin << "," << ymax - ymin << "\n";
-
 
     IvasObjectMetadata *xva_obj =
         (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);

@@ -59,6 +59,7 @@ class FTD_Structure {
   float score_threshold;
   cv::Rect_<float> roi_range;
   std::vector<std::shared_ptr<FTD_Trajectory>> tracks;
+  std::shared_ptr<Reid> reid;
   std::shared_ptr<Reid> reid0;
   std::shared_ptr<Reid> reid1;
   std::shared_ptr<Reid> reid2;

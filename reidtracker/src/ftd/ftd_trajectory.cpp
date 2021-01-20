@@ -18,7 +18,6 @@
 #include <glog/logging.h>
 #include <iostream>
 
-//#define _FTD_DEBUG_
 using namespace std;
 namespace vitis {
 namespace ai {
@@ -34,7 +33,7 @@ void FTD_Trajectory::Predict() {
   age += 1;
   if (time_since_update > 0) hit_streak = 0;
   time_since_update += 1;
-  std::get<1>(charact) = filter.GetPre();
+  std::get<0>(charact) = filter.GetPre();
 }
 
 int FTD_Trajectory::GetId() { return id; }
@@ -54,13 +53,11 @@ void FTD_Trajectory::Init(const InputCharact& input_charact,
   }
   // std::cout<<"new id: "<<id<<endl;
   charact = input_charact;
-#ifdef _FTD_DEBUG_
-  LOG(INFO) << "Init a new trajectory(id " << id << ", bbox "
-            << std::get<1>(charact) << ", label " << std::get<3>(charact)
-            << ")";
-#endif
+  LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER))
+      << "Init a new trajectory(id " << id << ", bbox " << std::get<0>(charact)
+      << ", label " << std::get<2>(charact) << ")";
   // Init FTD_ReidTracker and FTD_Filter
-  filter.Init(std::get<1>(charact), mode, specified_cfg_);
+  filter.Init(std::get<0>(charact), mode, specified_cfg_);
   // Init others
   status = 0;
   leap = 1;
@@ -74,18 +71,17 @@ void FTD_Trajectory::Init(const InputCharact& input_charact,
 
 void FTD_Trajectory::UpdateDetect(const InputCharact& input_charact) {
   // Update charact
-  CHECK(std::get<3>(charact) == std::get<3>(input_charact))
+  CHECK(std::get<2>(charact) == std::get<2>(input_charact))
       << "UpdateDetect must have the same label";
   charact = input_charact;
-#ifdef _FTD_DEBUG_
-  LOG(INFO) << "trajectory " << id << " update_detector with bbox "
-            << std::get<1>(charact);
-#endif
+  LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER))
+      << "trajectory " << id << " update_detector with bbox "
+      << std::get<0>(charact);
   time_since_update = 0;
   age += 1;
   hit_streak += 1;
   // Init FTD_ReidTracker and Update FTD_Filter
-  filter.UpdateDetect(std::get<1>(charact));
+  filter.UpdateDetect(std::get<0>(charact));
   // Update life
   if (status == 1) {
     leap = 0;
@@ -102,10 +98,9 @@ void FTD_Trajectory::UpdateDetect(const InputCharact& input_charact) {
 void FTD_Trajectory::UpdateTrack() {
   // update FTD_ReidTracker and Update FTD_Filter
   filter.UpdateFilter();
-#ifdef _FTD_DEBUG_
-  LOG(INFO) << "trajectory " << id << " update_filter";
-#endif
-  std::get<4>(charact) = -1;
+  LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER))
+      << "trajectory " << id << " update_filter";
+  std::get<3>(charact) = -1;
   // Update life
   if (status == 1) {
     leap -= 1;
@@ -126,19 +121,21 @@ void FTD_Trajectory::UpdateFeature(const cv::Mat& feat) {
   if (feature.size() == cv::Size(0, 0))
     feature = feat;
   else
-    feature = feature * 0.9 + feat * 0.1;
-  if (features.size() > 9) features.pop_back();
-  features.emplace_back(feature);
+    feature = feature * 0.5 + feat * 0.5;
+  // feature = feat;
+  if (features.size() < 1)
+    features.emplace_back(feature);
+  else
+    features[0] = feature;
 }
 
 std::vector<cv::Mat> FTD_Trajectory::GetFeatures() { return features; }
 void FTD_Trajectory::UpdateWithoutDetect() {
   // update FTD_ReidTracker and Update FTD_Filter
   filter.UpdateFilter();
-#ifdef _FTD_DEBUG_
-  LOG(INFO) << "trajectory " << id << " update_without_detect";
-#endif
-  std::get<4>(charact) = -1;
+  LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER))
+      << "trajectory " << id << " update_without_detect";
+  std::get<3>(charact) = -1;
 }
 
 int FTD_Trajectory::GetStatus() { return status; }
@@ -146,8 +143,8 @@ int FTD_Trajectory::GetStatus() { return status; }
 bool FTD_Trajectory::GetShown() { return have_been_shown; }
 
 OutputCharact FTD_Trajectory::GetOut() {
-  return std::make_tuple(id, filter.GetPost(), std::get<2>(charact),
-                         std::get<3>(charact), std::get<4>(charact));
+  return std::make_tuple(id, filter.GetPost(), std::get<1>(charact),
+                         std::get<2>(charact), std::get<3>(charact));
 }
 
 }  // namespace ai
