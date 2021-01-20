@@ -72,6 +72,11 @@ target_link_libraries(aibox_aa2
   glib-2.0 gobject-2.0 )
 install(TARGETS aibox_aa2 DESTINATION ${INSTALL_PATH}/bin)
 
+install(FILES
+    README
+    DESTINATION ${INSTALL_PATH}/
+    RENAME      README_AA2
+    )
 
 install(PROGRAMS
     script/aa2.sh
@@ -85,6 +90,9 @@ install(FILES
     config/draw_reid.json
     DESTINATION ${INSTALL_PATH}/share/aibox_aa2)
 
+install(DIRECTORY
+    notebook/
+    DESTINATION usr/share/notebooks/aibox_aa2/)
 
 set(VERSION "1.0.1")
 set(CPACK_PACKAGE_VERSION ${VERSION})
