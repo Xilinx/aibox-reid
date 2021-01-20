@@ -17,8 +17,6 @@ add_library(${PROJECT_NAME} SHARED
 
 target_link_libraries(${PROJECT_NAME}  ${OpenCV_LIBS} vitis_ai_library-reid pthread glog)
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  VERSION "${PROJECT_VERSION}"
-  SOVERSION "${PROJECT_VERSION_MAJOR}"
   LIBRARY_OUTPUT_NAME  ${PROJECT_NAME}
   )
 install(
