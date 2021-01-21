@@ -116,7 +116,7 @@ main (int argc, char *argv[])
             ! h264parse ! queue ! omxh264dec internal-entropy-buffers=3 \
             ! video/x-raw, format=NV12 \
             ! tee name=t0 t0.src_0 ! queue \
-            ! ivas_xm2m kconfig=\"%s/ped_pp.json\" \
+            ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
             ! queue ! ivas_xfilter name=refinedet kernels-config=\"%s/refinedet.json\" \
             ! queue ! ivas_xfilter name=crop      kernels-config=\"%s/crop.json\" \
             ! queue ! ivas_xfilter kernels-config=\"%s/reid.json\" \
