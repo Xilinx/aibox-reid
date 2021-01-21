@@ -30,19 +30,16 @@ static gint mipi = -1;
 static gint usb = -1;
 static gint w = 1920;
 static gint h = 1080;
-static gboolean nodet = FALSE;
 static gboolean reportFps = FALSE;
 static gboolean roiOff = FALSE;
 static GOptionEntry entries[] =
 {
     { "rtsp", 't', 0, G_OPTION_ARG_STRING_ARRAY, &rtspaddrs, "rtsp stream addr", "rtsp uri, multiple"},
     { "file", 'f', 0, G_OPTION_ARG_STRING_ARRAY, &filenames, "location of h26x file as input", "file path"},
-    { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
-    { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
-    { "framerate", 'r', 0, G_OPTION_ARG_INT, &fr, "framerate of the input", "30"},
-
-    { "nodet", 'n', 0, G_OPTION_ARG_NONE, &nodet, "no AI inference", NULL },
-    { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "report fps", NULL },
+//    { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
+//    { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
+//    { "framerate", 'r', 0, G_OPTION_ARG_INT, &fr, "framerate of the input", "30"},
+//    { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "report fps", NULL },
     { NULL }
 };
 
@@ -99,20 +96,20 @@ main (int argc, char *argv[])
     }
     g_option_context_free (optctx);
 
-    loop = g_main_loop_new (NULL, FALSE);
 
     std::string confdir("/opt/xilinx/share/aibox_aa2");
-    char pip[2500];
+    char pip[12500];
     pip[0] = '\0';
 
     char *perf = (char*)"";
 
-    char *rtspsrc = NULL, *filesrc = NULL;
+    char *rtspsrc = (char*)1, *filesrc = (char*)1;
     int indr = 0, indf = 0;
-    for (int i = 0; i < 4; i++) 
+    int i = 0;
+    for (i = 0; i < 4; i++) 
     {
         std::ostringstream srcOss;
-        if (rtspaddrs)
+        if (rtspaddrs && rtspsrc)
         {
             rtspsrc = rtspaddrs[indr++];
             if (!rtspsrc)
@@ -125,7 +122,7 @@ main (int argc, char *argv[])
                 srcOss << "rtspsrc location=\"" << rtspsrc << "\" ! queue ! rtph264depay ! queue ";
             }
         }
-        else if (filenames)
+        else if (filenames && filesrc)
         {
             filesrc = filenames[indf++];
             if (!filesrc)
@@ -137,38 +134,60 @@ main (int argc, char *argv[])
                 srcOss << "filesrc location=\"" << filesrc << "\"";
             }
         }
+        else
+        {
+            break;
+        }
 
         sprintf(pip + strlen(pip),
                 " %s \
                 ! h264parse ! queue ! omxh264dec internal-entropy-buffers=3 \
                 ! video/x-raw, format=NV12 \
-                ! tee name=t0 t0.src_0 ! queue \
+                ! tee name=t%d t%d.src_0 ! queue \
                 ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
-                ! queue ! ivas_xfilter name=refinedet kernels-config=\"%s/refinedet.json\" \
-                ! queue ! ivas_xfilter name=crop      kernels-config=\"%s/crop.json\" \
+                ! queue ! ivas_xfilter name=refinedet_%d kernels-config=\"%s/refinedet.json\" \
+                ! queue ! ivas_xfilter name=crop_%d      kernels-config=\"%s/crop.json\" \
                 ! queue ! ivas_xfilter kernels-config=\"%s/reid.json\" \
-                ! queue ! scalem0.sink_master ivas_xmetaaffixer name=scalem0 scalem0.src_master \
+                ! queue ! scalem%d.sink_master ivas_xmetaaffixer name=scalem%d scalem%d.src_master \
                 ! fakesink \
-                t0.src_1 \
-                ! queue ! scalem0.sink_slave_0 scalem0.src_slave_0 \
+                t%d.src_1 \
+                ! queue ! scalem%d.sink_slave_0 scalem%d.src_slave_0 \
                 ! queue ! ivas_xfilter kernels-config=\"%s/draw_reid.json\" \
                 ! queue ! %s \
-                ", srcOss.str().c_str(), confdir.c_str(), confdir.c_str() ,confdir.c_str() ,confdir.c_str() ,confdir.c_str()
+                ", srcOss.str().c_str()
+                , i, i
+                , confdir.c_str()
+                , i, confdir.c_str()
+                , i, confdir.c_str()
+                , confdir.c_str()
+                , i, i, i
+                , i
+                , i, i
+                , confdir.c_str()
                 , (i==0) ? "kmssink driver-name=xlnx plane-id=39 sync=false fullscreen-overlay=true" : "fakesink"
                );
     }
 
-    GstElement *pipeline = gst_parse_launch(pip, NULL);
-    gst_element_set_state (pipeline, GST_STATE_PLAYING);
-    /* Wait until error or EOS */
-    GstBus *bus = gst_element_get_bus (pipeline);
-    busWatchId = gst_bus_add_watch (bus, my_bus_callback, loop);
-    g_main_loop_run (loop);
 
-    gst_object_unref (bus);
-    gst_element_set_state (pipeline, GST_STATE_NULL);
-    gst_object_unref (pipeline);
-    g_source_remove (busWatchId);
-    g_main_loop_unref (loop);
+    if (i > 0)
+    {
+        loop = g_main_loop_new (NULL, FALSE);
+        GstElement *pipeline = gst_parse_launch(pip, NULL);
+        gst_element_set_state (pipeline, GST_STATE_PLAYING);
+        /* Wait until error or EOS */
+        GstBus *bus = gst_element_get_bus (pipeline);
+        busWatchId = gst_bus_add_watch (bus, my_bus_callback, loop);
+        g_main_loop_run (loop);
+
+        gst_object_unref (bus);
+        gst_element_set_state (pipeline, GST_STATE_NULL);
+        gst_object_unref (pipeline);
+        g_source_remove (busWatchId);
+        g_main_loop_unref (loop);
+    }
+    else
+    {
+        printf("Error: No input source.\n", pip);
+    }
     return 0;
 }

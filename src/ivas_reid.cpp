@@ -30,6 +30,7 @@
 
 #define MAX_REID 20
 #define DEFAULT_REID_THRESHOLD 0.2
+#define DEFAULT_REID_DEBUG     0
 
 using namespace std;
 
@@ -42,7 +43,7 @@ struct _Face {
 };
 
 typedef struct _kern_priv {
-  uint32_t top;
+  uint32_t debug;
   double threshold;
   std::shared_ptr<vitis::ai::ReidTracker> tracker;
 } ReidKernelPriv;
@@ -72,6 +73,13 @@ int32_t xlnx_kernel_init(IVASKernel *handle) {
     kernel_priv->threshold = DEFAULT_REID_THRESHOLD;
   else
     kernel_priv->threshold = json_number_value(val);
+
+  val = json_object_get(jconfig, "debug");
+  if (!val || !json_is_number(val))
+    kernel_priv->debug = DEFAULT_REID_DEBUG;
+  else
+    kernel_priv->debug = json_number_value(val);
+
   kernel_priv->tracker = vitis::ai::ReidTracker::create();
 
   handle->kernel_priv = (void *)kernel_priv;
@@ -156,7 +164,9 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       std::vector<vitis::ai::ReidTracker::OutputCharact>(
           kernel_priv->tracker->track(frame_num, input_characts, true, true));
   m__TOC__(Track);
-  cout << "tracker result: " << endl;
+  if (kernel_priv->debug) {
+      printf("tracker result: \n");
+  }
   int i = 0;
   for (auto &r : track_results) {
     auto box = get<1>(r);
@@ -168,8 +178,10 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
     float ymax = y + (box.height);
     uint64_t gid = get<0>(r);
     // float score = get<2>(r);
-    cout << frame_num << "," << gid << "," << xmin << "," << ymin << ","
-         << xmax - xmin << "," << ymax - ymin << "\n";
+    if (kernel_priv->debug) {
+      printf("Frame %d: %" PRIu64 ", xmin %f, ymin %f, w %f, y %f\n", frame_num, gid, xmin, ymin,
+         xmax - xmin, ymax - ymin);
+    }
 
     IvasObjectMetadata *xva_obj =
         (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
