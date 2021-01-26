@@ -5,7 +5,9 @@
   "kernels": [
     {
       "library-name": "libivas_reid.so",
-      "config": {}
+      "config": {
+          "debug": 0
+      }
     }
   ]
 }

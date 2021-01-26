@@ -1,12 +1,12 @@
 {
-  "xclbin-location":"/lib/firmware/xilinx/kv260-aa1/kv260-aa1.xclbin",
+  "xclbin-location":"/lib/firmware/xilinx/kv260-aa2/kv260-aa2.xclbin",
   "ivas-library-repo": "/opt/xilinx/lib",
   "kernels": [
     {
       "kernel-name": "pp_pipeline_accel:pp_pipeline_accel_1",
       "library-name": "libivas_xpp.so",
       "config": {
-        "debug_level" : 1,
+        "debug_level" : 0,
         "mean_r": 0,
         "mean_g": 0,
         "mean_b": 0,

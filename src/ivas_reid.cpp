@@ -159,6 +159,8 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
     }
   }
   m__TOC__(getinput);
+  if (input_characts.size() > 0)
+  {
   m__TIC__(Track);
   std::vector<vitis::ai::ReidTracker::OutputCharact> track_results =
       std::vector<vitis::ai::ReidTracker::OutputCharact>(
@@ -191,6 +193,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
     xva_obj->bbox_meta.ymax = ymax;
     xva_obj->obj_id = gid;
     i++;
+  }
   }
   return 0;
 }

@@ -35,6 +35,12 @@
             smartcam_aa1 -f /usr/share/somapp/movies/walking-people.nv12.30fps.1080p.h264 -W 1920 -H 1080 -r 30 -t rtsp -n &
 
     2) Run AA2 application:
-       aibox_aa2 -t rtsp://192.168.33.123:5000/test
+       aibox_aa can accept one or multi groups of options of --src, --srctype, --srcenc and --pos, to specify the src locatoin, src type (file/rtsp), src encoding type (h264/h265)
+       and the displayed position in the 4 grids of the 4k monitor.
+
+       aibox_aa2 -t rtsp -s rtsp://192.168.33.123:5000/test                               -p 0  \
+                 -t file -s /usr/share/somapp/movies/walking-people.nv12.30fps.1080p.h264 -p 3
+
+       Also, for multiple channel display, you can choose to launch one process for each channel with proper parameter, this provide the flexibility to kill each of them separatly.
 
 4. Command Option:

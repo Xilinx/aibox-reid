@@ -19,27 +19,32 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <set>
 #include <sstream>
 #include <memory>
 #include <stdexcept>
 
-static gchar** filenames = NULL;
-static gchar** rtspaddrs = NULL;
+static gchar* DEFAULT_SRC_TYPE = "f";
+static gchar* DEFAULT_SRC_ENC = "h264";
+static gchar** srctypes = NULL;
+static gchar** srcencs = NULL;
+static gchar** srcs= NULL;
+static gchar** poses = NULL;
 static gint   fr = 30;
-static gint mipi = -1;
-static gint usb = -1;
 static gint w = 1920;
 static gint h = 1080;
 static gboolean reportFps = FALSE;
-static gboolean roiOff = FALSE;
 static GOptionEntry entries[] =
 {
-    { "rtsp", 't', 0, G_OPTION_ARG_STRING_ARRAY, &rtspaddrs, "rtsp stream addr", "rtsp uri, multiple"},
-    { "file", 'f', 0, G_OPTION_ARG_STRING_ARRAY, &filenames, "location of h26x file as input", "file path"},
+    { "srctype", 't', 0, G_OPTION_ARG_STRING_ARRAY, &srctypes, "rtsp stream addr", "rtsp uri, multiple"},
+    { "srcenc", 'e', 0, G_OPTION_ARG_STRING_ARRAY, &srcencs, "rtsp stream addr", "rtsp uri, multiple"},
+    { "src", 's', 0, G_OPTION_ARG_STRING_ARRAY, &srcs, "location of h26x file as input", "file path"},
+    { "pos", 'p', 0, G_OPTION_ARG_STRING_ARRAY, &poses, "location of h26x file as input", "file path"},
+
 //    { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
 //    { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
 //    { "framerate", 'r', 0, G_OPTION_ARG_INT, &fr, "framerate of the input", "30"},
-//    { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "report fps", NULL },
+    { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "report fps", NULL },
     { NULL }
 };
 
@@ -74,6 +79,23 @@ my_bus_callback (GstBus * bus, GstMessage * message, gpointer data)
   return TRUE;
 }
 
+static int GetArgArraySizeCheckSameForNonZero(char** args, int &num, int &numNonZero)
+{
+    num = 0;
+    if (args)
+    {
+        for (; args[num]; num++) ;
+    }
+    if (num != 0)
+    {
+        if (numNonZero != 0 && numNonZero != num)
+        {
+            return 1;
+        }
+        numNonZero = num;
+    }
+    return 0;
+}
 
 
 int
@@ -83,7 +105,6 @@ main (int argc, char *argv[])
     GOptionContext *optctx;
     GError *error = NULL;
     guint busWatchId;
-
 
     optctx = g_option_context_new ("- AI Application of pedestrian + reid + tracking for multi RTSP streams, on SoM board of Xilinx.");
     g_option_context_add_main_entries (optctx, entries, NULL);
@@ -102,46 +123,76 @@ main (int argc, char *argv[])
     pip[0] = '\0';
 
     char *perf = (char*)"";
-
-    char *rtspsrc = (char*)1, *filesrc = (char*)1;
-    int indr = 0, indf = 0;
-    int i = 0;
-    for (i = 0; i < 4; i++) 
+    if (reportFps)
     {
-        std::ostringstream srcOss;
-        if (rtspaddrs && rtspsrc)
+        perf = (char*)"! perf ";
+    }
+
+    int numNonZero = 0, numSrcs = 0, numSrcTypes = 0, numSrcEncs = 0, numPoses = 0;
+    if ( GetArgArraySizeCheckSameForNonZero(srcs,     numSrcs,     numNonZero) != 0
+      || GetArgArraySizeCheckSameForNonZero(srctypes, numSrcTypes, numNonZero) != 0
+      || GetArgArraySizeCheckSameForNonZero(srcencs,  numSrcEncs,  numNonZero) != 0
+      || GetArgArraySizeCheckSameForNonZero(poses,    numPoses,    numNonZero) != 0 ) 
+    {
+        g_printerr("Error: The num of args srctype, srcenc, and pos should be the same as num of src, if you need to set them to non-empty.\n");
+        return 1;
+    }
+
+    if (numNonZero > 4) 
+    {
+        g_print("Warning: Srcs are more than 4, and only the first 4 will be used.");
+    }
+
+    std::set<int> posSet;
+    int validsrc = 0;
+    for (int i = 0; i < numSrcs; i++)
+    {
+        int pos;
+        if (numPoses == numSrcs)
         {
-            rtspsrc = rtspaddrs[indr++];
-            if (!rtspsrc)
+            char* tmp = poses[i];
+            if (std::string(tmp) == "n")
             {
-                i--;
-                continue;
+                pos = -1;
             }
             else
             {
-                srcOss << "rtspsrc location=\"" << rtspsrc << "\" ! queue ! rtph264depay ! queue ";
-            }
-        }
-        else if (filenames && filesrc)
-        {
-            filesrc = filenames[indf++];
-            if (!filesrc)
-            {
-                break;
-            }
-            else
-            {
-                srcOss << "filesrc location=\"" << filesrc << "\"";
+                pos = atoi(tmp);
+                if ( pos < 0 || pos > 3 ) {
+                    g_printerr("Error: Src %d 's position %s is invalid, should be in [0, 3]. This src will not display.\n", i, tmp);
+                    continue;
+                }
+                if ( ! posSet.insert(pos).second ) {
+                    g_printerr("Error: Src %d 's position %s is duplicated with others, please choose different position. This src will not display.\n", i, tmp);
+                    continue;
+                }
             }
         }
         else
         {
-            break;
+            pos = validsrc;
+        }
+        char* srctype = numSrcTypes == numSrcs ? srctypes[i] : DEFAULT_SRC_TYPE;
+        char* srcenc = numSrcEncs == numSrcs ? srcencs[i] : DEFAULT_SRC_ENC;
+        char* src = srcs[i];
+        std::ostringstream srcOss;
+        if (std::string(srctype) == "r" || std::string(srctype) == "rtsp")
+        {
+            srcOss << "rtspsrc location=\"" << src << "\" ! queue ! rtp" << srcenc << "depay ! queue ";
+        }
+        else if (std::string(srctype) == "f" || std::string(srctype) == "file")
+        {
+            srcOss << "filesrc location=\"" << src << "\"";
+        }
+        else
+        {
+            g_printerr("Error: srctype %d %s is invalid.", i, srctype);
+            continue;
         }
 
         sprintf(pip + strlen(pip),
                 " %s \
-                ! h264parse ! queue ! omxh264dec internal-entropy-buffers=3 \
+                ! %sparse ! queue ! omx%sdec \
                 ! video/x-raw, format=NV12 \
                 ! tee name=t%d t%d.src_0 ! queue \
                 ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
@@ -153,8 +204,9 @@ main (int argc, char *argv[])
                 t%d.src_1 \
                 ! queue ! scalem%d.sink_slave_0 scalem%d.src_slave_0 \
                 ! queue ! ivas_xfilter kernels-config=\"%s/draw_reid.json\" \
-                ! queue ! %s \
-                ", srcOss.str().c_str()
+                ! queue %s "
+                , srcOss.str().c_str()
+                , srcenc, srcenc
                 , i, i
                 , confdir.c_str()
                 , i, confdir.c_str()
@@ -164,12 +216,26 @@ main (int argc, char *argv[])
                 , i
                 , i, i
                 , confdir.c_str()
-                , (i==0) ? "kmssink driver-name=xlnx plane-id=39 sync=false fullscreen-overlay=true" : "fakesink"
+                , perf
                );
+
+        if (pos >= 0 && pos <= 3)
+        {
+            sprintf(pip + strlen(pip),
+                    "! kmssink bus-id=80000000.v_mix plane-id=%d render-rectangle=\"<%d,%d,1920,1080>\" show-preroll-frame=false sync=false"
+                    , 34+validsrc, pos%2*1920, pos/2*1080);
+        }
+        else
+        {
+            sprintf(pip + strlen(pip),
+                    "! fakesink ");
+        }
+
+        validsrc++;
     }
 
 
-    if (i > 0)
+    if (validsrc > 0)
     {
         loop = g_main_loop_new (NULL, FALSE);
         GstElement *pipeline = gst_parse_launch(pip, NULL);
@@ -187,7 +253,7 @@ main (int argc, char *argv[])
     }
     else
     {
-        printf("Error: No input source.\n", pip);
+        printf("Error: No valid input source.\n", pip);
     }
     return 0;
 }
