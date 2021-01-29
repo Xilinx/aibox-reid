@@ -36,15 +36,14 @@ static gint h = 1080;
 static gboolean reportFps = FALSE;
 static GOptionEntry entries[] =
 {
-    { "srctype", 't', 0, G_OPTION_ARG_STRING_ARRAY, &srctypes, "rtsp stream addr", "rtsp uri, multiple"},
-    { "srcenc", 'e', 0, G_OPTION_ARG_STRING_ARRAY, &srcencs, "rtsp stream addr", "rtsp uri, multiple"},
-    { "src", 's', 0, G_OPTION_ARG_STRING_ARRAY, &srcs, "location of h26x file as input", "file path"},
-    { "pos", 'p', 0, G_OPTION_ARG_STRING_ARRAY, &poses, "location of h26x file as input", "file path"},
-
+    { "src", 's', 0, G_OPTION_ARG_STRING_ARRAY, &srcs, "URI of rtsp src, or location of h264|h265 video file. Optional Can set up to 4 times", "[rtsp://server:port/id |file path]"},
+    { "srctype", 't', 0, G_OPTION_ARG_STRING_ARRAY, &srctypes, "Type of the input source: file (f)|rtsp (r). Optional. Can set up to 4 times.", "[f|file, r|rtsp]"},
+    { "srcenc", 'e', 0, G_OPTION_ARG_STRING_ARRAY, &srcencs, "Encoding type of the input source. Must set. Can set up to 4 times.", "[h264|h265]"},
+    { "pos", 'p', 0, G_OPTION_ARG_STRING_ARRAY, &poses, "Location of the display in the 4 grids of 4k monitor. Optional. 0: top left, 1: top right, 2: bottom left, 3: bottom right. Optional. Can set up to 4 times.", "[0|1|2|3]"},
 //    { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
 //    { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
 //    { "framerate", 'r', 0, G_OPTION_ARG_INT, &fr, "framerate of the input", "30"},
-    { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "report fps", NULL },
+    { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "Report fps", NULL },
     { NULL }
 };
 
@@ -58,6 +57,8 @@ my_bus_callback (GstBus * bus, GstMessage * message, gpointer data)
       gchar *debug;
       gst_message_parse_info (message, &err, &debug);
       g_print ("Info: %s\n", debug);
+      g_free(debug);
+      g_error_free(err);
       break;
     }
     case GST_MESSAGE_EOS:
@@ -69,6 +70,8 @@ my_bus_callback (GstBus * bus, GstMessage * message, gpointer data)
       gchar *debug;
       gst_message_parse_error (message, &err, &debug);
       g_print ("Error: %s\n", debug);
+      g_free(debug);
+      g_error_free(err);
       break;
     }
     default:
