@@ -227,7 +227,7 @@ std::vector<OutputCharact> FTD_Structure::Update(
   __TIC__(allreid);
   for (auto i = 0u; i < unmatch_detect.size(); ++i) {
     __TIC__(reid);
-    cout << detect_imgs[unmatch_detect[i]].size() << endl;
+//    cout << detect_imgs[unmatch_detect[i]].size() << endl;
     Mat feat = reid->run(detect_imgs[unmatch_detect[i]]).feat;
     __TOC__(reid);
     feats.emplace_back(feat);

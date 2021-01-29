@@ -36,9 +36,9 @@ static gint h = 1080;
 static gboolean reportFps = FALSE;
 static GOptionEntry entries[] =
 {
-    { "src", 's', 0, G_OPTION_ARG_STRING_ARRAY, &srcs, "URI of rtsp src, or location of h264|h265 video file. Optional Can set up to 4 times", "[rtsp://server:port/id |file path]"},
+    { "src", 's', 0, G_OPTION_ARG_STRING_ARRAY, &srcs, "URI of rtsp src, or location of h264|h265 video file. Must set. Can set up to 4 times", "[rtsp://server:port/id |file path]"},
     { "srctype", 't', 0, G_OPTION_ARG_STRING_ARRAY, &srctypes, "Type of the input source: file (f)|rtsp (r). Optional. Can set up to 4 times.", "[f|file, r|rtsp]"},
-    { "srcenc", 'e', 0, G_OPTION_ARG_STRING_ARRAY, &srcencs, "Encoding type of the input source. Must set. Can set up to 4 times.", "[h264|h265]"},
+    { "srcenc", 'e', 0, G_OPTION_ARG_STRING_ARRAY, &srcencs, "Encoding type of the input source. Optional. Can set up to 4 times.", "[h264|h265]"},
     { "pos", 'p', 0, G_OPTION_ARG_STRING_ARRAY, &poses, "Location of the display in the 4 grids of 4k monitor. Optional. 0: top left, 1: top right, 2: bottom left, 3: bottom right. Optional. Can set up to 4 times.", "[0|1|2|3]"},
 //    { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
 //    { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
