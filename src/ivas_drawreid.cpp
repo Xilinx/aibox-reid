@@ -336,10 +336,13 @@ extern "C"
       for (uint32_t i = 0; i < (ivas_meta ? g_list_length(ivas_meta->xmeta.objects) : 0); i++)
       {
         IvasObjectMetadata *xva_obj = (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
+        if (xva_obj->obj_id != -1) 
+        {
         DrawReID( inframe, kpriv,
                   xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.xmax,
                   xva_obj->bbox_meta.ymin, xva_obj->bbox_meta.ymax,
                   xva_obj->obj_id, lumaImg, chromaImg);
+        }
       }
       //////////////////////
       return 0;

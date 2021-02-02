@@ -198,6 +198,14 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
     xva_obj->obj_id = gid;
     i++;
   }
+
+  for (; i < n_obj; i++)
+  {
+
+  IvasObjectMetadata *xva_obj =
+          (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
+  xva_obj->obj_id = -1;
+  }
   }
   return 0;
 }
