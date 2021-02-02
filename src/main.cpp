@@ -24,7 +24,7 @@
 #include <memory>
 #include <stdexcept>
 
-static gchar* DEFAULT_SRC_TYPE = "f";
+static gchar* DEFAULT_SRC_TYPE = "r";
 static gchar* DEFAULT_SRC_ENC = "h264";
 static gchar** srctypes = NULL;
 static gchar** srcencs = NULL;
