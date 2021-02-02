@@ -35,6 +35,7 @@
 
 #include <vitis/ai/refinedet.hpp>
 #include <vitis/ai/reidtracker.hpp>
+#include <vitis/ai/reid.hpp>
 #include "../src/common.hpp"
 
 using namespace cv;
@@ -73,7 +74,7 @@ void reader() {
   for (size_t i = 0; i < images.size(); ++i) {
     string imageName = images[i];
     Mat img = imread(baseImagePath + "/img1/" + imageName);
-    resize(img, img, Size(480, 360));
+    //resize(img, img, Size(480, 360));
     read_imgs.emplace_back(img);
   }
   cout << "read end " << endl;
@@ -156,10 +157,11 @@ void displayImage() {
 
 void run() {
   auto tracker = vitis::ai::ReidTracker::create();
+  auto reid = vitis::ai::Reid::create("personreid-res18_pt");
   auto det = vitis::ai::RefineDet::create("refinedet_pruned_0_96");
   std::vector<vitis::ai::ReidTracker::InputCharact> input_characts;
   string outfile =
-      "result" + baseImagePath.substr(baseImagePath.size() - 3, 2) + ".txt";
+      baseImagePath.substr(0, baseImagePath.size() - 1) + ".txt";
   ofstream of(outfile);
   while (1) {
     pair<int, Mat> pairIndexImage;
@@ -185,10 +187,11 @@ void run() {
     input_characts.clear();
     int lid = 0;
     for (auto box : results.bboxes) {
-      Rect2f in_box = Rect2f(box.x * image.cols, box.y * image.rows,
+      Rect in_box = Rect(box.x * image.cols, box.y * image.rows,
                              box.width * image.cols, box.height * image.rows);
       Mat img = image(in_box);
-      input_characts.emplace_back(in_box, box.score, -1, lid++, img);
+      auto feat = reid->run(img).feat;
+      input_characts.emplace_back(feat, in_box, box.score, -1, lid++);
     }
     // input_characts.resize(3);
     __TIC__(track)

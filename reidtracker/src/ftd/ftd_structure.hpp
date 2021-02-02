@@ -53,16 +53,13 @@ class FTD_Structure {
 
  private:
   std::vector<uint64_t> id_record;
+  uint64_t track_id;
   float iou_threshold;
   float feat_distance_low;
   float feat_distance_high;
   float score_threshold;
   cv::Rect_<float> roi_range;
   std::vector<std::shared_ptr<FTD_Trajectory>> tracks;
-  std::shared_ptr<Reid> reid;
-  std::shared_ptr<Reid> reid0;
-  std::shared_ptr<Reid> reid1;
-  std::shared_ptr<Reid> reid2;
 
   void GetOut(std::vector<OutputCharact>& output_characts);
   std::vector<int> remove_id_this_frame;

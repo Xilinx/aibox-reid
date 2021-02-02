@@ -22,7 +22,7 @@
 namespace vitis {
 namespace ai {
 
-ReidTrackerImp::ReidTrackerImp(uint64_t mode, const SpecifiedCfg &cfg) {
+ReidTrackerImp::ReidTrackerImp(uint64_t mode, const SpecifiedCfg& cfg) {
   mode_ = mode;
   ftd_ = new FTD_Structure(cfg);
   if (mode & MODE_MULTIDETS) {
@@ -67,7 +67,7 @@ std::vector<OutputCharact> ReidTrackerImp::patchFrame(const uint64_t frame_id) {
 }
 
 std::vector<OutputCharact> ReidTrackerImp::track(
-    const uint64_t frame_id, std::vector<InputCharact> &input_characts,
+    const uint64_t frame_id, std::vector<InputCharact>& input_characts,
     const bool is_detection, const bool is_normalized) {
   std::vector<OutputCharact> det_track;
   if (mode_ & MODE_MULTIDETS) {
@@ -113,15 +113,15 @@ bool ReidTrackerImp::setTrackLock(int frame_id, int timeout, int interval) {
   if (mode_ & MODE_MULTIDETS) {
     int time = 0;
     while (sm_->getCurId() != frame_id) {
-      DLOG(INFO) << "Track: wait for mutex, fid: " << frame_id
+      LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER)) << "Track: wait for mutex, fid: " << frame_id
                  << " cur_id: " << sm_->getCurId();
       std::this_thread::sleep_for(std::chrono::milliseconds(interval));
       if ((time += interval) > timeout) {
-        DLOG(INFO) << "Track: setTrackLock timeout.";
+        LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER)) << "Track: setTrackLock timeout.";
         return false;
       }
     }
-    DLOG(INFO) << "Track: start track, fid: " << frame_id;
+    LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER)) << "Track: start track, fid: " << frame_id;
     sm_->updateLastTrackedId(frame_id);
     return sm_->set(frame_id, StateMap::TRC_ST);
   }
@@ -130,7 +130,7 @@ bool ReidTrackerImp::setTrackLock(int frame_id, int timeout, int interval) {
 
 bool ReidTrackerImp::releaseTrackLock(int frame_id) {
   if (mode_ & MODE_MULTIDETS) {
-    DLOG(INFO) << "Track: end track, fid: " << frame_id;
+    LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER)) << "Track: end track, fid: " << frame_id;
     bool success = sm_->set(frame_id, StateMap::TRC_ED);
     if (success) {
       sm_->clearBadStates();
@@ -141,7 +141,7 @@ bool ReidTrackerImp::releaseTrackLock(int frame_id) {
 }
 
 std::vector<OutputCharact> ReidTrackerImp::trackWithoutLock(
-    const uint64_t frame_id, std::vector<InputCharact> &input_characts,
+    const uint64_t frame_id, std::vector<InputCharact>& input_characts,
     const bool is_detection, const bool is_normalized) {
   if (mode_ & MODE_MULTIDETS) {
     // Track for the missing frames between (last_tracked_id, frame_id)
@@ -151,7 +151,7 @@ std::vector<OutputCharact> ReidTrackerImp::trackWithoutLock(
         std::vector<InputCharact> empty_charact;
         auto undet_track =
             ftd_->Update(last_tracked_id, false, is_normalized, empty_charact);
-        DLOG(INFO) << "do undet_track for " << last_tracked_id
+        LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER)) << "do undet_track for " << last_tracked_id
                    << " frame_id: " << frame_id;
         undet_tracks_->push(
             std::make_pair<uint64_t, std::vector<OutputCharact>>(
@@ -164,7 +164,7 @@ std::vector<OutputCharact> ReidTrackerImp::trackWithoutLock(
 };
 
 std::vector<OutputCharact> ReidTrackerImp::trackWithLock(
-    const uint64_t frame_id, std::vector<InputCharact> &input_characts,
+    const uint64_t frame_id, std::vector<InputCharact>& input_characts,
     const bool is_detection, const bool is_normalized) {
   std::vector<OutputCharact> det_track;
   if (mode_ & MODE_MULTIDETS) {
@@ -197,7 +197,7 @@ void ReidTrackerImp::printUndetTracks() {
     if (undet_tracks_->size() != 0) {
       while (undet_tracks_->front()) {
         auto result = undet_tracks_->pop();
-        LOG(INFO) << "UndetTracks: " << result->first;
+        LOG_IF(INFO, ENV_PARAM(DEBUG_REID_TRACKER)) << "UndetTracks: " << result->first;
       }
       return;
     }
