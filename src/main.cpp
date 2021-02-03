@@ -185,7 +185,7 @@ main (int argc, char *argv[])
         }
         else if (std::string(srctype) == "f" || std::string(srctype) == "file")
         {
-            srcOss << "filesrc location=\"" << src << "\"";
+            srcOss << "multifilesrc location=\"" << src << "\"";
         }
         else
         {

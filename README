@@ -41,6 +41,4 @@
        aibox_aa2 -t rtsp -s rtsp://192.168.33.123:5000/test                               -p 0  \
                  -t file -s /usr/share/somapp/movies/walking-people.nv12.30fps.1080p.h264 -p 3
 
-       Also, for multiple channel display, you can choose to launch one process for each channel with proper parameter, this provide the flexibility to kill each of them separatly.
-
 4. Command Option:
