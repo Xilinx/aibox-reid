@@ -14,19 +14,12 @@
 # limitations under the License.
 #
 
-LD_LIBRARY_PATH="/opt/xilinx/lib/:${LD_LIBRARY_PATH}" \
-gst-launch-1.0 \
-filesrc location="/usr/share/somapp/movies/walking-people.nv12.30fps.1080p.h264" \
-  ! h264parse ! omxh264dec internal-entropy-buffers=3 \
-  ! video/x-raw, format=NV12 \
-  ! tee name=t0 t0.src_0 ! queue \
-    ! ivas_xmultisrc kconfig="/opt/xilinx/share/aibox_aa2/ped_pp.json" \
-    ! ivas_xfilter name=refinedet kernels-config="/opt/xilinx/share/aibox_aa2/refinedet.json" ! queue \
-    ! ivas_xfilter name=crop      kernels-config="/opt/xilinx/share/aibox_aa2/crop.json" ! queue \
-    ! ivas_xfilter kernels-config="/opt/xilinx/share/aibox_aa2/reid.json" ! queue \
-    ! scalem0.sink_master ivas_xmetaaffixer name=scalem0 scalem0.src_master \
-    ! fakesink \
-  t0.src_1 ! queue ! \
-    scalem0.sink_slave_0 scalem0.src_slave_0 ! queue \
-    ! ivas_xfilter kernels-config="/opt/xilinx/share/aibox_aa2/draw_reid.json" ! queue \
-    ! kmssink driver-name=xlnx plane-id=39 sync=false fullscreen-overlay=true
+(
+log="/tmp/log"
+file=${1:-"/usr/share/somapp/movies/AA2/AA2-shop.nv12.30fps.1080p.h264"}
+smartcam_aa1 -f ${file} -t rtsp -p 5000 -n > ${log} 2>&1 &
+while [ $(wc -l ${log} | awk '{print $1}') -lt 2 ]; do
+    addr=$(head -n 2 ${log} | tail -n 1)
+done
+aibox_aa2 -s ${addr} -t rtsp -s ${file} -t file -R
+)
