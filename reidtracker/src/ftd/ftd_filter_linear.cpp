@@ -191,7 +191,7 @@ cv::Rect_<float> FTD_Filter_Linear::GetPre() {
   frame_id += 0.001f;
   // change it when frame_id max
   if (frame_id >= frame_max) {
-    frame_id -= (frame_max - frame_start);
+    frame_id = frame_start + 0.001f;
     ClearSquare(coordx, parax, (frame_max - frame_start));
     ClearSquare(coordy, paray, (frame_max - frame_start));
     ClearSquare(coords, paras, (frame_max - frame_start));

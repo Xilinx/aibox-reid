@@ -153,6 +153,12 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
         m__TIC__(inputpush);
         input_characts.emplace_back(feat, input_box, xva_obj->obj_prob, -1, i);
         m__TOC__(inputpush);
+        if (kernel_priv->debug == 2) {
+            printf("tracker input: Frame %d: obj_ind %d, xmin %f, ymin %f, xmax %f, ymax %f, prob: %f\n",
+                    frame_num, i, xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
+                       xva_obj->bbox_meta.xmax,
+                       xva_obj->bbox_meta.ymax, xva_obj->obj_prob);
+        }
         // xva_obj->obj_id = ivas_reid_run(
         //    image, handle, frame_num, i, xctr, yctr, xva_obj->bbox_meta.xmin,
         //    xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymin,
