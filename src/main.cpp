@@ -23,9 +23,10 @@
 #include <sstream>
 #include <memory>
 #include <stdexcept>
+#include <unistd.h>
 
-static gchar* DEFAULT_SRC_TYPE = "r";
-static gchar* DEFAULT_SRC_ENC = "h264";
+static gchar* DEFAULT_SRC_TYPE = (gchar*)"r";
+static gchar* DEFAULT_SRC_ENC = (gchar*)"h264";
 static gchar** srctypes = NULL;
 static gchar** srcencs = NULL;
 static gchar** srcs= NULL;
@@ -100,6 +101,19 @@ static int GetArgArraySizeCheckSameForNonZero(char** args, int &num, int &numNon
     return 0;
 }
 
+static std::string exec(const char* cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
+
 
 int
 main (int argc, char *argv[])
@@ -129,6 +143,22 @@ main (int argc, char *argv[])
     if (reportFps)
     {
         perf = (char*)"! perf ";
+    }
+
+    if (access("/dev/allegroDecodeIP", F_OK) != 0)
+    {
+        g_printerr("ERROR: VCU decoder is not ready.\n");
+        return 1;
+    }
+
+    if (access("/dev/dri/by-path/platform-80000000.v_mix-card", F_OK) != 0)
+    {
+        g_printerr("ERROR: Mixer device is not ready.\n");
+        return 1;
+    }
+    else 
+    {
+        exec("echo | modetest -M xlnx -D 80000000.v_mix -s 52@40:3840x2160-30@NV16");
     }
 
     int numNonZero = 0, numSrcs = 0, numSrcTypes = 0, numSrcEncs = 0, numPoses = 0;
