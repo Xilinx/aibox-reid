@@ -95,6 +95,11 @@ install(FILES
 #    notebook/
 #    DESTINATION usr/share/notebooks/aibox_aa2/)
 
+install(DIRECTORY
+    video/
+    DESTINATION ${INSTALL_PATH}/share/video/AA2)
+
+
 set(VERSION "1.0.1")
 set(CPACK_PACKAGE_VERSION ${VERSION})
 set(CPACK_GENERATOR "RPM")
