@@ -21,7 +21,9 @@
 #include <iostream>
 #include <math.h>
 #include <ivas/ivas_kernel.h>
-#include <gst/ivas/gstivasmeta.h>
+#include <gst/ivas/gstinferencemeta.h>
+#define __STDC_FORMAT_MACROS 1
+#include <stdint.h>
 
 
 enum
@@ -103,18 +105,12 @@ convert_rgb_to_yuv_clrs (color clr, unsigned char *y, unsigned short *uv)
 }
 
 static void DrawReID( IVASFrame *inframe, ivas_xoverlaypriv *kpriv,
-  int xmin, int xmax, int ymin, int ymax, int lable,
+  int xmin, int xmax, int ymin, int ymax, uint64_t lable,
   Mat& lumaImg, Mat& chromaImg)
 {
-//  LOG_MESSAGE(LOG_LEVEL_INFO, "RESULT: %s(%d) %d %d %d %d (%f)",
-//              label_present ? classification->class_label : NULL,
-//              classification->class_id, child->bbox.x, child->bbox.y,
-//              child->bbox.width + child->bbox.x,
-//              child->bbox.height + child->bbox.y, classification->class_prob);
-
   /* Check whether the frame is NV12 or BGR and act accordingly */
   char label_s[256];
-  sprintf(label_s, "%d", lable);
+  sprintf(label_s, "%lu", lable);
   std::string label_string(label_s);
 
   if (inframe->props.fmt == IVAS_VFMT_Y_UV8_420)
@@ -331,20 +327,38 @@ extern "C"
       Mat lumaImg(input[0]->props.height, input[0]->props.stride, CV_8UC1, (char *)inframe->vaddr[0]);
       Mat chromaImg(input[0]->props.height / 2, input[0]->props.stride / 2, CV_16UC1, (char *)inframe->vaddr[1]);
 
-      ////////////////////////////
-      GstIvasMeta *ivas_meta = gst_buffer_get_ivas_meta((GstBuffer *)inframe->app_priv);
-      for (uint32_t i = 0; i < (ivas_meta ? g_list_length(ivas_meta->xmeta.objects) : 0); i++)
+      GstInferenceMeta *infer_meta = ((GstInferenceMeta *)gst_buffer_get_meta((GstBuffer *)
+                                                                inframe->app_priv,
+                                                            gst_inference_meta_api_get_type()));
+      if (infer_meta == NULL)
       {
-        IvasObjectMetadata *xva_obj = (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
-        if (xva_obj->obj_id != -1) 
-        {
-        DrawReID( inframe, kpriv,
-                  xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.xmax,
-                  xva_obj->bbox_meta.ymin, xva_obj->bbox_meta.ymax,
-                  xva_obj->obj_id, lumaImg, chromaImg);
-        }
+          LOG_MESSAGE(LOG_LEVEL_INFO, "ivas meta data is not available for crop");
+          return false;
       }
-      //////////////////////
+
+      GstInferencePrediction *root = infer_meta->prediction;
+
+      /* Iterate through the immediate child predictions */
+      for (GSList *child_predictions = gst_inference_prediction_get_children(root);
+           child_predictions;
+           child_predictions = g_slist_next(child_predictions))
+      {
+          GstInferencePrediction *child = (GstInferencePrediction *)child_predictions->data;
+
+          /* On each children, iterate through the different associated classes */
+          for (GList *classes = child->classifications;
+               classes; classes = g_list_next(classes))
+          {
+              GstInferenceClassification *classification = (GstInferenceClassification *)classes->data;
+              if ((int64_t)child->reserved_2 != -1) 
+              {
+              DrawReID( inframe, kpriv,
+                        child->bbox.x, child->bbox.x + child->bbox.width,
+                        child->bbox.y, child->bbox.y + child->bbox.height,
+                        (uint64_t)child->reserved_1, lumaImg, chromaImg);
+              }
+          }
+      }
       return 0;
     }
     else

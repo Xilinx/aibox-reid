@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <gst/ivas/gstivasmeta.h>
+#include <gst/ivas/gstinferencemeta.h>
 #include <ivas/ivas_kernel.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -27,6 +27,7 @@
 #include <vitis/ai/reid.hpp>
 #include <vitis/ai/reidtracker.hpp>
 #include "common.hpp"
+#include <sstream>
 
 #define MAX_REID 20
 #define DEFAULT_REID_THRESHOLD 0.2
@@ -49,11 +50,67 @@ typedef struct _kern_priv {
   std::shared_ptr<vitis::ai::ReidTracker> tracker;
 } ReidKernelPriv;
 
-static int ivas_reid_run(const cv::Mat &image, IVASKernel *handle,
-                         int frame_num, int buf_num, int xctr, int yctr,
-                         int xmin, int xmax, int ymin, int ymax, double prob) {
-  int id = 0;
-  return id;
+struct _roi {
+    uint32_t y_cord;
+    uint32_t x_cord;
+    uint32_t height;
+    uint32_t width;
+    double   prob;
+	  GstInferencePrediction *prediction;
+};
+
+#define MAX_CHANNELS 40
+typedef struct _ivas_ms_roi {
+    uint32_t nobj;
+    struct _roi roi[MAX_CHANNELS];
+} ivas_ms_roi;
+
+static int parse_rect(IVASKernel * handle, int start,
+      IVASFrame * input[MAX_NUM_OBJECT], IVASFrame * output[MAX_NUM_OBJECT],
+      ivas_ms_roi &roi_data
+      )
+{
+    IVASFrame *inframe = input[0];
+    GstInferenceMeta *infer_meta = ((GstInferenceMeta *)gst_buffer_get_meta((GstBuffer *)
+                                                              inframe->app_priv,
+                                                          gst_inference_meta_api_get_type()));
+    if (infer_meta == NULL)
+    {
+        printf("No inference info for ReID.");
+        return false;
+    }
+
+    GstInferencePrediction *root = infer_meta->prediction;
+
+    roi_data.nobj = 0;
+    /* Iterate through the immediate child predictions */
+    for (GSList *child_predictions = gst_inference_prediction_get_children(root);
+         child_predictions;
+         child_predictions = g_slist_next(child_predictions))
+    {
+        GstInferencePrediction *child = (GstInferencePrediction *)child_predictions->data;
+
+        /* On each children, iterate through the different associated classes */
+        for (GList *classes = child->classifications;
+             classes; classes = g_list_next(classes))
+        {
+            GstInferenceClassification *classification = (GstInferenceClassification *)classes->data;
+            if (roi_data.nobj < MAX_CHANNELS)
+            {
+                int ind = roi_data.nobj;
+                struct _roi &roi = roi_data.roi[ind];
+                roi.y_cord = (uint32_t)child->bbox.y + child->bbox.y % 2;
+                roi.x_cord = (uint32_t)child->bbox.x;
+                roi.height = (uint32_t)child->bbox.height - child->bbox.height % 2;
+                roi.width = (uint32_t)child->bbox.width - child->bbox.width % 2;
+                roi.prob = classification->class_prob;
+                roi.prediction = child;
+                roi_data.nobj++;
+
+            }
+        }
+    }
+    return 0;
 }
 
 extern "C" {
@@ -103,32 +160,17 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
   frame_num++;
   std::vector<vitis::ai::ReidTracker::InputCharact> input_characts;
   /* get metadata from input */
-  GstIvasMeta *ivas_meta =
-      gst_buffer_get_ivas_meta((GstBuffer *)in_ivas_frame->app_priv);
-  if (ivas_meta == NULL) {
-    printf("meta is null, exit");
-    return 0;
-  } else if (g_list_length(ivas_meta->xmeta.objects) > MAX_NUM_OBJECT) {
-    printf("Can't process more then %d objects", MAX_NUM_OBJECT);
-    return -1;
-  }
 
-  uint32_t n_obj = ivas_meta ? g_list_length(ivas_meta->xmeta.objects) : 0;
+  ivas_ms_roi roi_data;
+  parse_rect(handle, start, input, output, roi_data);
+
   m__TIC__(getfeat);
-  for (uint32_t i = 0; i < n_obj; i++) {
-    IvasObjectMetadata *xva_obj =
-        (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
-
-    if (!xva_obj) {
-      printf("ERROR: IVAS REID: Unable to get meta data pointer");
-      return -1;
-    } else {
-      GstBuffer *buffer = (GstBuffer *)g_list_nth_data(
-          xva_obj->obj_list, 0); /* resized crop image*/
-      int xctr = xva_obj->bbox_meta.xmax -
-                 ((xva_obj->bbox_meta.xmax - xva_obj->bbox_meta.xmin) / 2);
-      int yctr = xva_obj->bbox_meta.ymax -
-                 ((xva_obj->bbox_meta.ymax - xva_obj->bbox_meta.ymin) / 2);
+  for (uint32_t i = 0; i < roi_data.nobj; i++) {
+    struct _roi& roi = roi_data.roi[i];
+    {
+      GstBuffer *buffer = (GstBuffer *)roi.prediction->sub_buffer; /* resized crop image*/
+      int xctr = roi.x_cord + roi.width / 2;
+      int yctr = roi.y_cord + roi.height / 2;
       GstMapInfo info;
       gst_buffer_map(buffer, &info, GST_MAP_READ);
 
@@ -136,33 +178,23 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       if (!vmeta) {
         printf("ERROR: IVAS REID: video meta not present in buffer");
       } else if (vmeta->width == 80 && vmeta->height == 160) {
-        // printf("INFO %d-%d: %f, %f, %f, %f, %f\n", frame_num, i,
-        //       xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymax,
-        //       xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
-        //       xva_obj->obj_prob);
         char *indata = (char *)info.data;
         cv::Mat image(vmeta->height, vmeta->width, CV_8UC3, indata);
-        // TODO:
         auto input_box =
-            cv::Rect2f(xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
-                       xva_obj->bbox_meta.xmax - xva_obj->bbox_meta.xmin,
-                       xva_obj->bbox_meta.ymax - xva_obj->bbox_meta.ymin);
+            cv::Rect2f(roi.x_cord, roi.y_cord,
+                       roi.width, roi.height);
         m__TIC__(reidrun);
         auto feat = kernel_priv->det->run(image).feat;
         m__TOC__(reidrun);
         m__TIC__(inputpush);
-        input_characts.emplace_back(feat, input_box, xva_obj->obj_prob, -1, i);
+        input_characts.emplace_back(feat, input_box, roi.prob, -1, i);
         m__TOC__(inputpush);
         if (kernel_priv->debug == 2) {
-            printf("tracker input: Frame %d: obj_ind %d, xmin %f, ymin %f, xmax %f, ymax %f, prob: %f\n",
-                    frame_num, i, xva_obj->bbox_meta.xmin, xva_obj->bbox_meta.ymin,
-                       xva_obj->bbox_meta.xmax,
-                       xva_obj->bbox_meta.ymax, xva_obj->obj_prob);
+            printf("Tracker input: Frame %d: obj_ind %d, xmin %u, ymin %u, xmax %u, ymax %u, prob: %f\n",
+                    frame_num, i, roi.x_cord, roi.y_cord,
+                       roi.x_cord + roi.width,
+                       roi.y_cord + roi.height, roi.prob);
         }
-        // xva_obj->obj_id = ivas_reid_run(
-        //    image, handle, frame_num, i, xctr, yctr, xva_obj->bbox_meta.xmin,
-        //    xva_obj->bbox_meta.xmax, xva_obj->bbox_meta.ymin,
-        //    xva_obj->bbox_meta.ymax, xva_obj->obj_prob);
       } else {
         printf("ERROR: IVAS REID: Invalid resolution for reid (%u x %u)\n",
                vmeta->width, vmeta->height);
@@ -177,40 +209,35 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       std::vector<vitis::ai::ReidTracker::OutputCharact>(
           kernel_priv->tracker->track(frame_num, input_characts, true, true));
   if (kernel_priv->debug) {
-      printf("tracker result: \n");
+      printf("Tracker result: \n");
   }
   int i = 0;
   for (auto &r : track_results) {
     auto box = get<1>(r);
-    float x = box.x;
-    float y = box.y;
-    float xmin = x;
-    float ymin = y;
-    float xmax = x + (box.width);
-    float ymax = y + (box.height);
+    gint tmpx = box.x, tmpy = box.y;
+    guint tmpw = box.width, tmph = box.height;
     uint64_t gid = get<0>(r);
-    // float score = get<2>(r);
     if (kernel_priv->debug) {
-      printf("Frame %d: %" PRIu64 ", xmin %f, ymin %f, w %f, y %f\n", frame_num, gid, xmin, ymin,
-         xmax - xmin, ymax - ymin);
+      printf("Frame %d: %" PRIu64 ", xmin %d, ymin %d, w %u, h %u\n",
+         frame_num, gid,
+         tmpx, tmpy,
+         tmpw, tmph);
     }
 
-    IvasObjectMetadata *xva_obj =
-        (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
-    xva_obj->bbox_meta.xmin = x;
-    xva_obj->bbox_meta.ymin = y;
-    xva_obj->bbox_meta.xmax = xmax;
-    xva_obj->bbox_meta.ymax = ymax;
-    xva_obj->obj_id = gid;
+    struct _roi& roi = roi_data.roi[i];
+    roi_data.roi[i].prediction->bbox.x = tmpx;
+    roi_data.roi[i].prediction->bbox.y = tmpy;
+    roi_data.roi[i].prediction->bbox.width = tmpw;
+    roi_data.roi[i].prediction->bbox.height = tmph;
+    roi_data.roi[i].prediction->reserved_1 = (void*)gid;
+    roi_data.roi[i].prediction->reserved_2 = (void*)1;
+
     i++;
   }
 
-  for (; i < n_obj; i++)
+  for (; i < roi_data.nobj; i++)
   {
-
-  IvasObjectMetadata *xva_obj =
-          (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, i);
-  xva_obj->obj_id = -1;
+    roi_data.roi[i].prediction->reserved_2 = (void*)-1;
   }
   }
   return 0;
