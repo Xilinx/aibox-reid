@@ -44,15 +44,17 @@ cv::Rect_<float> ConvertZToBboxL(const cv::Rect_<float> &z) {
   }
 }
 
-void FTD_Filter_Linear::LeastSquare(std::vector<std::array<float, 2>> &coord,
-                                    std::array<float, 8> &para, float x,
+void FTD_Filter_Linear::LeastSquare(std::vector<std::array<double, 2>> &coord,
+                                    std::array<double, 8> &para, double x,
                                     int region) {
   // if(!coord.empty()) std::cout<<"frameid: "<<frame_id<<" coords:
   // "<<coord.back()[0]<<std::endl;
+  // LOG_IF(INFO, 1) << "frame_id double: " << frame_id
+  //                << " dis: " << frame_max - frame_start;
   CHECK(coord.empty() || float(frame_id) > coord.back()[0])
       << "coord must be ascending";
   CHECK(region >= 1) << "error region";
-  std::array<float, 2> tmp_coord;
+  std::array<double, 2> tmp_coord;
   tmp_coord[0] = frame_id;
   tmp_coord[1] = x;
   para[2] += tmp_coord[0] * tmp_coord[1];
@@ -72,10 +74,10 @@ void FTD_Filter_Linear::LeastSquare(std::vector<std::array<float, 2>> &coord,
     coord.erase(coord.begin());
   }
   if (coord.size() == 1) {
-    para[0] = 0.f;
+    para[0] = 0.d;
     para[1] = tmp_coord[1];
   } else {
-    float V = para[6] * para[4] - para[3] * para[3];
+    double V = para[6] * para[4] - para[3] * para[3];
     para[0] = (para[6] * para[2] - para[3] * para[5]) / V;
     para[1] = (para[4] * para[5] - para[2] * para[3]) / V;
     // float A = para[2] - para[3]*para[5]/para[6];
@@ -83,9 +85,12 @@ void FTD_Filter_Linear::LeastSquare(std::vector<std::array<float, 2>> &coord,
     // float C = para[7] - para[5]*para[5]/para[6];
     // float r = (A*A)/(B*C);
   }
+  // LOG_IF(INFO, 1) << "para: " << para[0] << " " << para[1] << " " << para[2]
+  //                << " " << para[3] << " " << para[4] << " " << para[5] << " "
+  //                << para[6] << " " << para[7];
 }
-void FTD_Filter_Linear::ClearSquare(std::vector<std::array<float, 2>> &coord,
-                                    std::array<float, 8> &para, float step) {
+void FTD_Filter_Linear::ClearSquare(std::vector<std::array<double, 2>> &coord,
+                                    std::array<double, 8> &para, double step) {
   for (auto &tmp_coord : coord) {
     tmp_coord[0] -= step;
   }
@@ -93,22 +98,22 @@ void FTD_Filter_Linear::ClearSquare(std::vector<std::array<float, 2>> &coord,
   para[4] = para[4] - 2 * step * para[3] + step * step * para[6];
   para[3] = para[3] - step * para[6];
   if (coord.size() == 1) {
-    para[0] = 0.f;
+    para[0] = 0.d;
     para[1] = coord[0][1];
   } else {
-    float V = para[6] * para[4] - para[3] * para[3];
+    double V = para[6] * para[4] - para[3] * para[3];
     para[0] = (para[6] * para[2] - para[3] * para[5]) / V;
     para[1] = (para[4] * para[5] - para[2] * para[3]) / V;
   }
 }
 
-void FTD_Filter_Linear::LeastMean(std::vector<std::array<float, 2>> &coord,
-                                  std::array<float, 4> &para, float x,
+void FTD_Filter_Linear::LeastMean(std::vector<std::array<double, 2>> &coord,
+                                  std::array<double, 4> &para, double x,
                                   int region) {
   CHECK(coord.empty() || float(frame_id) > coord.back()[0])
       << "coord must be ascending";
   CHECK(region >= 1) << "error region";
-  std::array<float, 2> tmp_coord;
+  std::array<double, 2> tmp_coord;
   tmp_coord[0] = frame_id;
   tmp_coord[1] = x;
   para[2] += tmp_coord[1];
@@ -120,23 +125,23 @@ void FTD_Filter_Linear::LeastMean(std::vector<std::array<float, 2>> &coord,
     coord.erase(coord.begin());
   }
   if (coord.size() == 1) {
-    para[0] = 0.f;
+    para[0] = 0.d;
     para[1] = tmp_coord[1];
   } else {
-    para[0] = 0.f;
+    para[0] = 0.d;
     para[1] = para[2] / para[3];
   }
 }
-void FTD_Filter_Linear::ClearMean(std::vector<std::array<float, 2>> &coord,
-                                  std::array<float, 4> &para, float step) {
+void FTD_Filter_Linear::ClearMean(std::vector<std::array<double, 2>> &coord,
+                                  std::array<double, 4> &para, double step) {
   for (auto &tmp_coord : coord) {
     tmp_coord[0] -= step;
   }
   if (coord.size() == 1) {
-    para[0] = 0.f;
+    para[0] = 0.d;
     para[1] = coord[0][1];
   } else {
-    para[0] = 0.f;
+    para[0] = 0.d;
     para[1] = para[2] / para[3];
   }
 }
@@ -148,8 +153,8 @@ void FTD_Filter_Linear::Init(const cv::Rect_<float> &bbox, int mode,
       LOG(FATAL) << "FTD_Filter_Linear Only support mode 1!";
     }; break;
     case 1: {
-      frame_start = 0.0f;
-      frame_max = 0.05f;
+      frame_start = 0.000f;
+      frame_max = 0.050f;
     }; break;
     default:
       break;
@@ -157,10 +162,10 @@ void FTD_Filter_Linear::Init(const cv::Rect_<float> &bbox, int mode,
   frame_id = frame_start;
   // allregion = std::get<0>(specified_cfg);
   allregion = std::array<int, 4>({3, 3, 1, 1});
-  parax = std::array<float, 8>{0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
-  paray = std::array<float, 8>{0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
-  paras = std::array<float, 8>{0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
-  parar = std::array<float, 4>{0.f, 0.f, 0.f, 0.f};
+  parax = std::array<double, 8>{0.d, 0.d, 0.d, 0.d, 0.d, 0.d, 0.d, 0.d};
+  paray = std::array<double, 8>{0.d, 0.d, 0.d, 0.d, 0.d, 0.d, 0.d, 0.d};
+  paras = std::array<double, 8>{0.d, 0.d, 0.d, 0.d, 0.d, 0.d, 0.d, 0.d};
+  parar = std::array<double, 4>{0.d, 0.d, 0.d, 0.d};
   cv::Rect_<float> z = ConvertBboxToZL(bbox);
   LeastSquare(coordx, parax, z.x, allregion[0]);
   LeastSquare(coordy, paray, z.y, allregion[1]);
@@ -191,6 +196,7 @@ cv::Rect_<float> FTD_Filter_Linear::GetPre() {
   frame_id += 0.001f;
   // change it when frame_id max
   if (frame_id >= frame_max) {
+    // frame_id -= (frame_max - frame_start);
     frame_id = frame_start + 0.001f;
     ClearSquare(coordx, parax, (frame_max - frame_start));
     ClearSquare(coordy, paray, (frame_max - frame_start));

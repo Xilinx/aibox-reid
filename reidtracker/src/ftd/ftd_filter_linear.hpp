@@ -40,22 +40,22 @@ class FTD_Filter_Linear {
   cv::Rect_<float> GetPost();
 
  private:
-  void LeastSquare(std::vector<std::array<float, 2>> &coord,
-                   std::array<float, 8> &para, float x, int region);
-  void ClearSquare(std::vector<std::array<float, 2>> &coord,
-                   std::array<float, 8> &para, float step);
-  void LeastMean(std::vector<std::array<float, 2>> &coord,
-                 std::array<float, 4> &para, float x, int region);
-  void ClearMean(std::vector<std::array<float, 2>> &coord,
-                 std::array<float, 4> &para, float step);
-  std::vector<std::array<float, 2>> coordx;
-  std::vector<std::array<float, 2>> coordy;
-  std::vector<std::array<float, 2>> coords;
-  std::vector<std::array<float, 2>> coordr;
-  std::array<float, 8> parax;
-  std::array<float, 8> paray;
-  std::array<float, 8> paras;
-  std::array<float, 4> parar;
+  void LeastSquare(std::vector<std::array<double, 2>> &coord,
+                   std::array<double, 8> &para, double x, int region);
+  void ClearSquare(std::vector<std::array<double, 2>> &coord,
+                   std::array<double, 8> &para, double step);
+  void LeastMean(std::vector<std::array<double, 2>> &coord,
+                 std::array<double, 4> &para, double x, int region);
+  void ClearMean(std::vector<std::array<double, 2>> &coord,
+                 std::array<double, 4> &para, double step);
+  std::vector<std::array<double, 2>> coordx;
+  std::vector<std::array<double, 2>> coordy;
+  std::vector<std::array<double, 2>> coords;
+  std::vector<std::array<double, 2>> coordr;
+  std::array<double, 8> parax;
+  std::array<double, 8> paray;
+  std::array<double, 8> paras;
+  std::array<double, 4> parar;
   float frame_id;
   float frame_start;
   float frame_max;
