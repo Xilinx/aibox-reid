@@ -84,7 +84,8 @@ static int parse_rect(IVASKernel * handle, int start,
 
     roi_data.nobj = 0;
     /* Iterate through the immediate child predictions */
-    for (GSList *child_predictions = gst_inference_prediction_get_children(root);
+    GSList *tmp = gst_inference_prediction_get_children(root);
+    for (GSList *child_predictions = tmp;
          child_predictions;
          child_predictions = g_slist_next(child_predictions))
     {
@@ -110,6 +111,7 @@ static int parse_rect(IVASKernel * handle, int start,
             }
         }
     }
+    g_slist_free(tmp);
     return 0;
 }
 

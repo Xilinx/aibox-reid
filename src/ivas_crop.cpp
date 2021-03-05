@@ -321,14 +321,10 @@ static int parse_rect(IVASKernel * handle, int start,
 
     GstInferencePrediction *root = infer_meta->prediction;
 
-    /* Print the entire prediction tree */
-    char *pstr = gst_inference_prediction_to_string(root);
-    LOG_MESSAGE(LOG_LEVEL_DEBUG, "Prediction tree: \n%s", pstr);
-
     roi_data.nobj = 0;
     /* Iterate through the immediate child predictions */
-    for (GSList *child_predictions = gst_inference_prediction_get_children(root);
-         child_predictions;
+    GSList *collects = gst_inference_prediction_get_children(root);
+    for ( GSList *child_predictions = collects; child_predictions;
          child_predictions = g_slist_next(child_predictions))
     {
         GstInferencePrediction *child = (GstInferencePrediction *)child_predictions->data;
@@ -351,6 +347,7 @@ static int parse_rect(IVASKernel * handle, int start,
             }
         }
     }
+    g_slist_free(collects);
     return 0;
 }
 extern "C"

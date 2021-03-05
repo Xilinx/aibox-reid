@@ -133,6 +133,7 @@ main (int argc, char *argv[])
         return -1;
     }
     g_option_context_free (optctx);
+    g_clear_error (&error);
 
 
     std::string confdir("/opt/xilinx/share/aibox_aa2");
