@@ -23,7 +23,7 @@
                                         crop.json                   Config of cropping for reid.
                                         reid.json                   Config of reid.
                                         draw_reid.json              Config of final results drawing.
-        Example video files: => /opt/xilinx/share/video/AA2
+        Example video files: => /usr/share/somapp/movies/AA2
 
 2. The accelerated application (AA) firmware consist of bitstream, device tree overlay (dtbo) and xclbin
    file. The AA firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used

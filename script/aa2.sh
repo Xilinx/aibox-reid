@@ -16,7 +16,7 @@
 
 (
 log="/tmp/log"
-file=${1:-"/opt/xilinx/share/video/AA2/AA2-shop.nv12.30fps.1080p.h264"}
+file=${1:-"/usr/share/somapp/movies/AA2/AA2-shop.nv12.30fps.1080p.h264"}
 smartcam_aa1 -f ${file} -t rtsp -p 5000 -n > ${log} 2>&1 &
 while [ $(wc -l ${log} | awk '{print $1}') -lt 2 ]; do
     addr=$(head -n 2 ${log} | tail -n 1)
