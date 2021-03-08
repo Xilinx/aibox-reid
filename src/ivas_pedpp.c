@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Xilinx Inc.
+ * Copyright 2021 Xilinx, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,6 @@
 
 typedef struct _kern_priv
 {
-    int en_cc;
-    int crop_width;
-    int crop_height;
-    int roix;
-    int roiy;
     float mean_r;
     float mean_g;
     float mean_b;
@@ -58,50 +53,10 @@ int32_t xlnx_kernel_init(IVASKernel *handle)
 
     kernel_priv = (ResizeKernelPriv *)calloc(1, sizeof(ResizeKernelPriv));
     if (!kernel_priv) {
-        printf("Error: Unable to allocate crop kernel memory\n");
+        printf("Error: Unable to allocate resize kernel memory\n");
     }
 
     /* parse config */
-    val = json_object_get(jconfig, "en_cc");
-    if (!val || !json_is_number(val))
-        kernel_priv->en_cc = 0;
-    else {
-        kernel_priv->en_cc = json_number_value(val);
-    }
-    printf("Preprocess: en_cc=%d\n", kernel_priv->en_cc);
-
-    val = json_object_get(jconfig, "crop_width");
-    if (!val || !json_is_number(val))
-        kernel_priv->crop_width = 300;
-    else {
-        kernel_priv->crop_width = json_number_value(val);
-    }
-    printf("Preprocess: crop_width=%d\n", kernel_priv->crop_width);
-
-    val = json_object_get(jconfig, "crop_height");
-    if (!val || !json_is_number(val))
-        kernel_priv->crop_height = 300;
-    else {
-        kernel_priv->crop_height = json_number_value(val);
-    }
-    printf("Preprocess: crop_height=%d\n", kernel_priv->crop_height);
-
-    val = json_object_get(jconfig, "roix");
-    if (!val || !json_is_number(val))
-        kernel_priv->roix = 0;
-    else {
-        kernel_priv->roix = json_number_value(val);
-    }
-    printf("Preprocess: roix=%d\n", kernel_priv->roix);
-
-    val = json_object_get(jconfig, "roiy");
-    if (!val || !json_is_number(val))
-        kernel_priv->roiy = 0;
-    else {
-        kernel_priv->roiy = json_number_value(val);
-    }
-    printf("Preprocess: roiy=%d\n", kernel_priv->roiy);
-
     val = json_object_get(jconfig, "mean_r");
     if (!val || !json_is_number(val))
         kernel_priv->mean_r = 0;
@@ -167,32 +122,18 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start, IVASFrame *input[MAX_NU
     ResizeKernelPriv *kernel_priv;
     kernel_priv = (ResizeKernelPriv *)handle->kernel_priv;
 
-    if(!(kernel_priv->en_cc)) {
-        ivas_register_write(handle, &(input[0]->paddr[0]), sizeof(uint64_t), 0x10);      /* RGB Input */
-    }
-    else {
-        ivas_register_write(handle, &(input[0]->paddr[0]), sizeof(uint64_t), 0x1C);      /* Y Input */
-        ivas_register_write(handle, &(input[0]->paddr[1]), sizeof(uint64_t), 0x28);      /* UV Input */
-    }
+    ivas_register_write(handle, &(input[0]->props.width), sizeof(uint32_t), 0x40);   /* In width */
+    ivas_register_write(handle, &(input[0]->props.height), sizeof(uint32_t), 0x48);  /* In height */
+    ivas_register_write(handle, &(input[0]->props.stride), sizeof(uint32_t), 0x50);  /* In stride */
 
-    ivas_register_write(handle, &(output[0]->paddr[0]), sizeof(uint64_t), 0x34);      /* Output */
-    ivas_register_write(handle, &(kernel_priv->params->paddr[0]), sizeof(uint64_t), 0x40);     /* Params */
+    ivas_register_write(handle, &(output[0]->props.width), sizeof(uint32_t), 0x58);  /* Out width */
+    ivas_register_write(handle, &(output[0]->props.height), sizeof(uint32_t), 0x60); /* Out height */
+    ivas_register_write(handle, &(output[0]->props.width), sizeof(uint32_t), 0x68); /* Out stride */
 
-    ivas_register_write(handle, &(input[0]->props.width), sizeof(uint32_t), 0x4C);   /* In width */
-    ivas_register_write(handle, &(input[0]->props.height), sizeof(uint32_t), 0x54);  /* In height */
-    ivas_register_write(handle, &(input[0]->props.stride), sizeof(uint32_t), 0x5C);  /* In stride */
-
-    ivas_register_write(handle, &(output[0]->props.width), sizeof(uint32_t), 0x64);  /* Out width */
-    ivas_register_write(handle, &(output[0]->props.height), sizeof(uint32_t), 0x6C); /* Out height */
-    ivas_register_write(handle, &(output[0]->props.width), sizeof(uint32_t), 0x84); /* Out stride */
-    
-    ivas_register_write(handle, &(kernel_priv->crop_width), sizeof(uint32_t), 0x74);  /* Crop width */
-    ivas_register_write(handle, &(kernel_priv->crop_height), sizeof(uint32_t), 0x7C);  /* Crop height */
-
-    ivas_register_write(handle, &(kernel_priv->roix), sizeof(uint32_t), 0x8C);       /* roix */
-    ivas_register_write(handle, &(kernel_priv->roiy), sizeof(uint32_t), 0x94);       /* roiy */
-
-    ivas_register_write(handle, &(kernel_priv->en_cc), sizeof(uint32_t), 0x9C);       /* en_cc */
+    ivas_register_write(handle, &(input[0]->paddr[0]), sizeof(uint64_t), 0x10);      /* Y Input */
+    ivas_register_write(handle, &(input[0]->paddr[1]), sizeof(uint64_t), 0x1C);      /* UV Input */
+    ivas_register_write(handle, &(output[0]->paddr[0]), sizeof(uint64_t), 0x28);      /* Output */
+    ivas_register_write(handle, &(kernel_priv->params->paddr[0]), sizeof(uint64_t), 0x34);     /* Params */
 
     ivas_register_write(handle, &start, sizeof(uint32_t), 0x0);                      /* start */
     return 0;
@@ -211,4 +152,3 @@ int32_t xlnx_kernel_done(IVASKernel *handle)
     } while (!(0x4 & val));
     return 1;
 }
-

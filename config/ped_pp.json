@@ -4,7 +4,7 @@
   "kernels": [
     {
       "kernel-name": "pp_pipeline_accel:pp_pipeline_accel_1",
-      "library-name": "libivas_xpp.so",
+      "library-name": "libivas_pedpp.so",
       "config": {
         "debug_level" : 0,
         "mean_r": 0,
