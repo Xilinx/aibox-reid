@@ -25,10 +25,10 @@ install(
   RUNTIME DESTINATION ${INSTALL_BIN_DIR}
   LIBRARY DESTINATION ${INSTALL_LIB_DIR})
 
-install(
-  EXPORT ${PROJECT_NAME}-targets
-  NAMESPACE ${PROJECT_NAME}::
-  DESTINATION ${INSTALL_CMAKE_DIR})
+#install(
+#  EXPORT ${PROJECT_NAME}-targets
+#  NAMESPACE ${PROJECT_NAME}::
+#  DESTINATION ${INSTALL_CMAKE_DIR})
 
 #install(FILES ../include/vitis/ai/reidtracker.hpp
 #  DESTINATION include/vitis/ai/)

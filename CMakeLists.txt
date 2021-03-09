@@ -40,7 +40,7 @@ target_include_directories(ivas_reid PRIVATE reidtracker/include/)
 set_target_properties(ivas_reid PROPERTIES INSTALL_RPATH "/opt/xilinx/lib")
 target_link_libraries(ivas_reid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson vitis_ai_library-reid aa2_reidtracker gstivasinfermeta-1.0 glog pthread
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} jansson vitis_ai_library-reid aa2_reidtracker gstivasinfermeta-1.0 glog pthread
   )
 install(TARGETS ivas_reid DESTINATION ${INSTALL_PATH}/lib)
 add_dependencies(ivas_reid aa2_reidtracker)
@@ -49,14 +49,14 @@ add_library(ivas_crop SHARED src/ivas_crop.cpp)
 target_include_directories(ivas_crop PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(ivas_crop
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson ivasutil gstivasinfermeta-1.0 glog)
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} jansson ivasutil gstivasinfermeta-1.0 glog)
 install(TARGETS ivas_crop DESTINATION ${INSTALL_PATH}/lib)
 
 add_library(ivas_drawreid SHARED src/ivas_drawreid.cpp)
 target_include_directories(ivas_drawreid PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(ivas_drawreid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS} gstivasmeta-1.0 jansson ivasutil gstivasinfermeta-1.0)
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS}  jansson ivasutil gstivasinfermeta-1.0)
 install(TARGETS ivas_drawreid DESTINATION ${INSTALL_PATH}/lib)
 
 
@@ -89,7 +89,7 @@ install(FILES
     config/crop.json
     config/reid.json
     config/draw_reid.json
-    DESTINATION ${INSTALL_PATH}/share/aibox_aa2)
+    DESTINATION ${INSTALL_PATH}/share/ivas/aibox_aa2)
 
 #install(DIRECTORY
 #    notebook/
