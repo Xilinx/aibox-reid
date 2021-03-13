@@ -159,7 +159,7 @@ main (int argc, char *argv[])
     }
     else 
     {
-        exec("echo | modetest -M xlnx -D 80000000.v_mix -s 52@40:3840x2160-30@NV16");
+        exec("echo | modetest -M xlnx -D 80000000.v_mix -s 52@40:3840x2160@NV16");
     }
 
     int numNonZero = 0, numSrcs = 0, numSrcTypes = 0, numSrcEncs = 0, numPoses = 0;
