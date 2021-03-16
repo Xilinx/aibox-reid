@@ -228,6 +228,7 @@ main (int argc, char *argv[])
                 " %s \
                 ! %sparse ! queue ! omx%sdec \
                 ! video/x-raw, format=NV12 \
+                ! queue max-size-buffers=2 leaky=2 \
                 ! tee name=t%d t%d.src_0 ! queue \
                 ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
                 ! queue ! ivas_xfilter name=refinedet_%d kernels-config=\"%s/refinedet.json\" \
