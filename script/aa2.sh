@@ -15,11 +15,13 @@
 #
 
 (
-log="/tmp/log"
+log="/tmp/log.${BASHPID}"
+rm ${log}
 file=${1:-"/usr/share/somapp/movies/AA2/AA2-shop.nv12.30fps.1080p.h264"}
+killall smartcam_aa1
 smartcam_aa1 -f ${file} -t rtsp -p 5000 -n > ${log} 2>&1 &
-while [ $(wc -l ${log} | awk '{print $1}') -lt 2 ]; do
-    addr=$(head -n 2 ${log} | tail -n 1)
+while [ "${addr}" == "" ]; do
+    addr=$(cat ${log} | grep "rtsp://")
 done
 aibox_aa2 -s ${addr} -t rtsp -s ${file} -t file -R
 )
