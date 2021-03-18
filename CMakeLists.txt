@@ -91,9 +91,9 @@ install(FILES
     config/draw_reid.json
     DESTINATION ${INSTALL_PATH}/share/ivas/aibox_aa2)
 
-#install(DIRECTORY
-#    notebook/
-#    DESTINATION usr/share/notebooks/aibox_aa2/)
+install(DIRECTORY
+    notebook/
+    DESTINATION ${INSTALL_PATH}/share/notebooks/aibox_aa2/)
 
 set(VERSION "1.0.1")
 set(CPACK_PACKAGE_VERSION ${VERSION})
