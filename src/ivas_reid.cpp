@@ -179,7 +179,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
       GstVideoMeta *vmeta = gst_buffer_get_video_meta(buffer);
       if (!vmeta) {
         printf("ERROR: IVAS REID: video meta not present in buffer");
-      } else if (vmeta->width == 80 && vmeta->height == 160) {
+      } else if (vmeta->width == 80 && vmeta->height == 176) {
         char *indata = (char *)info.data;
         cv::Mat image(vmeta->height, vmeta->width, CV_8UC3, indata);
         auto input_box =

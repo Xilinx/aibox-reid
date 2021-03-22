@@ -88,86 +88,6 @@ static uint32_t xlnx_multiscaler_align(uint32_t stride_in, uint16_t AXIMMDataWid
 using namespace std;
 using namespace cv;
 
-// static int Crop_one(
-//     IVASKernel *handle,
-//     IVASFrame *input[MAX_NUM_OBJECT],
-//     const ivas_ms_roi& roi_data,
-//     GstIvasMeta *ivas_meta,
-//     const Mat& lumaImg,
-//     const Mat& chromaImg,
-//     int ind
-// )
-// {
-//     IVASFrameProps out_props = {0, };
-//     out_props.width = 80;
-//     out_props.height = 160;
-//     out_props.fmt = IVAS_VFMT_BGR8;
-//     uint32_t size = FRAME_SIZE(out_props.width, out_props.height);
-// 
-//     IVASFrame *out_ivas_frame = ivas_alloc_buffer(handle, size, IVAS_INTERNAL_MEMORY, &out_props);
-//     if (!out_ivas_frame)
-//     {
-//         printf("ERROR: IVAS MS: failed to allocate frame memory");
-//         return 0;
-//     }
-//     else
-//     {
-//         IvasObjectMetadata *ivas_obj =
-//             (IvasObjectMetadata *)g_list_nth_data(ivas_meta->xmeta.objects, ind);
-//         if (ivas_obj)
-//         {
-//             ivas_obj->obj_list = g_list_append(ivas_obj->obj_list, out_ivas_frame->app_priv);
-// 
-//             ivas_obj->bbox_meta.xmin = roi_data.roi[ind].x_cord;
-//             ivas_obj->bbox_meta.xmax = roi_data.roi[ind].x_cord + roi_data.roi[ind].width;
-//             ivas_obj->bbox_meta.ymin = roi_data.roi[ind].y_cord;
-//             ivas_obj->bbox_meta.ymax = roi_data.roi[ind].y_cord + roi_data.roi[ind].height;
-//             ivas_obj->obj_prob = roi_data.roi[ind].prob;
-//             {
-//                 cv::Rect yROI(roi_data.roi[ind].x_cord, roi_data.roi[ind].y_cord,
-//                               roi_data.roi[ind].width, roi_data.roi[ind].height);
-//                 cv::Mat ycrop = lumaImg(yROI);
-//                 cv::Rect cROI(roi_data.roi[ind].x_cord, roi_data.roi[ind].y_cord / 2,
-//                               roi_data.roi[ind].width, roi_data.roi[ind].height / 2);
-//                 cv::Mat ccrop = chromaImg(cROI);
-//                 cv::Mat sub12;
-//                 vconcat(ycrop, ccrop, sub12);
-// 
-//                 cv::Mat subbgr;
-//                 cv::cvtColor(sub12, subbgr, COLOR_YUV2BGR_NV12);
-// 
-//                 GstMapInfo info;
-//                 gst_buffer_map((GstBuffer *)out_ivas_frame->app_priv, &info, GST_MAP_WRITE);
-//                 char *indata = (char *)info.data;
-//                 cv::Mat subbgrResize(out_props.height, out_props.width, CV_8UC3, indata);
-//                 resize(subbgr, subbgrResize, subbgrResize.size());
-//                 gst_buffer_unmap((GstBuffer *)out_ivas_frame->app_priv, &info);
-//             }
-//             out_ivas_frame->app_priv = NULL;
-//         }
-//         ivas_free_buffer(handle, out_ivas_frame);
-//         out_ivas_frame = NULL;
-//         return 0;
-//     }
-// }
-
-// static int Crop_range(
-//     IVASKernel *handle,
-//     IVASFrame *input[MAX_NUM_OBJECT],
-//     const ivas_ms_roi& roi_data,
-//     GstIvasMeta *ivas_meta,
-//     const Mat& lumaImg,
-//     const Mat& chromaImg,
-//     int start, int stop
-// )
-// {
-//     for (int i = start; i < stop; i++)
-//     {
-//         Crop_one(handle, input, roi_data, ivas_meta, lumaImg, chromaImg, i);
-//     }
-//     return 0;
-// }
-
 static int Crop_one_bgr(
     IVASKernel *handle,
     IVASFrame *input[MAX_NUM_OBJECT],
@@ -178,7 +98,7 @@ static int Crop_one_bgr(
 {
     IVASFrameProps out_props = {0, };
     out_props.width = 80;
-    out_props.height = 160;
+    out_props.height = 176;
     out_props.fmt = IVAS_VFMT_BGR8;
     uint32_t size = FRAME_SIZE(out_props.width, out_props.height);
 
@@ -265,25 +185,7 @@ static int xlnx_multiscaler_descriptor_create (IVASKernel *handle,
 
     IVASFrame *in_ivas_frame = input[0];
 
-    if (in_ivas_frame->props.fmt == IVAS_VFMT_Y_UV8_420)
-    {
-//    LOG_MESSAGE(LOG_LEVEL_DEBUG, "Input frame is in NV12 format\n");
-//
-//    Mat lumaImg(input[0]->props.height, input[0]->props.stride, CV_8UC1, (char *)in_ivas_frame->vaddr[0]);
-//    Mat chromaImg(input[0]->props.height / 2, input[0]->props.stride, CV_8UC1, (char *)in_ivas_frame->vaddr[1]);
-//
-//    Thread(3, 0, roi_data.nobj, std::bind(Crop_range,
-//        handle,
-//        input,
-//    roi_data,
-//    ivas_meta,
-//    std::cref(lumaImg),
-//    std::cref(chromaImg),
-//    std::placeholders::_1,
-//    std::placeholders::_2
-//    ) );
-    }
-    else if (in_ivas_frame->props.fmt == IVAS_VFMT_BGR8)
+    if (in_ivas_frame->props.fmt == IVAS_VFMT_BGR8)
     {
     LOG_MESSAGE(LOG_LEVEL_DEBUG, "Input frame is in BGR8 format\n");
 
