@@ -214,9 +214,11 @@ main (int argc, char *argv[])
         char* srcenc = numSrcEncs == numSrcs ? srcencs[i] : DEFAULT_SRC_ENC;
         char* src = srcs[i];
         std::ostringstream srcOss;
+        std::string queue = "";
         if (std::string(srctype) == "r" || std::string(srctype) == "rtsp")
         {
             srcOss << "rtspsrc location=\"" << src << "\" ! queue ! rtp" << srcenc << "depay ! queue ";
+            queue = " ! queue max-size-buffers=2 leaky=2 ";
         }
         else if (std::string(srctype) == "f" || std::string(srctype) == "file")
         {
@@ -231,8 +233,7 @@ main (int argc, char *argv[])
         sprintf(pip + strlen(pip),
                 " %s \
                 ! %sparse ! queue ! omx%sdec \
-                ! video/x-raw, format=NV12 \
-                ! queue max-size-buffers=2 leaky=2 \
+                ! video/x-raw, format=NV12 %s \
                 ! tee name=t%d t%d.src_0 ! queue \
                 ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
                 ! queue ! ivas_xfilter name=refinedet_%d kernels-config=\"%s/refinedet.json\" \
@@ -246,6 +247,7 @@ main (int argc, char *argv[])
                 ! queue %s "
                 , srcOss.str().c_str()
                 , srcenc, srcenc
+                , queue.c_str()
                 , i, i
                 , confdir.c_str()
                 , i, confdir.c_str()
