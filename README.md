@@ -17,7 +17,7 @@ Binary File: => /opt/xilinx/bin
 
 aibox_aa2                   main app
 
-configuration File: => /opt/xilinx/share/aibox_aa2
+configuration File: => /opt/xilinx/share/ivas/aibox_aa2
 
 |||
 |-|-|
@@ -27,7 +27,7 @@ configuration File: => /opt/xilinx/share/aibox_aa2
 | reid.json        |           Config of reid.
 | draw_reid.json   |           Config of final results drawing.
 
-Example video files: => /usr/share/somapp/movies/AA2
+**REMOVED for legal issue** Example video files: => /usr/share/somapp/movies/AA2
 
 # Fireware Loading
 
@@ -38,9 +38,9 @@ The accelerated application (AA) firmware consist of bitstream, device tree over
 
          You should see similar output to this:
 
->         Accelerator,     Type,   Active
->         kv260-aa2,       flat,   0
->         kv260-aa1,       flat,   0
+>         Accelerator,              Type,   Active
+>         kv260-aibox-aa2,          flat,   0
+>         kv260-smartcamera-aa1,    flat,   0
 
          The Active column shows which AA is currently loaded in the system. It will change to 1 after the firmware is loaded.
 
@@ -48,7 +48,7 @@ The accelerated application (AA) firmware consist of bitstream, device tree over
 
          run the following command:
 
-         `xmutil loadapp kv260-aa2`
+         `xmutil loadapp kv260-aibox-aa2`
 
    3. After you are done running the application, you can unload the curently loaded AA application firmware by running:
 
@@ -64,7 +64,7 @@ This application needs 4K monitor, so that up to 4 channels of 1080p video could
 
 Before booting the board, please connect the monitor to the board via either DP or HDMI port.
 
-### Setup RTSP server
+## Setup RTSP server
 
    * If no RTSP server on hand, smartcam_aa1 can be used as the RTSP server on the AA2 platform, with -n option, which turn off the server side AI inference.
 
@@ -86,34 +86,30 @@ Before booting the board, please connect the monitor to the board via either DP 
 
    * You may also use other RTSP sources, such as an IP camera. 
 
-   * Run AA2 application:
+## Run AA2 application:
 
-      * Run one channel with one process:
-         aibox_aa2 -s rtsp://192.168.33.123:5000/test -t rtsp -p 0 
+   * Run one channel with one process:
+      aibox_aa2 -s rtsp://192.168.33.123:5000/test -t rtsp -p 0 
 
-         * Run multiple channels together with one process:
-               aibox_aa2 -s rtsp://192.168.33.123:5000/test -t rtsp -p 2 
-                         -s /usr/share/somapp/movies/AA2/AA2-shop.nv12.30fps.1080p.h264 -t file -p 1
+   * Run multiple channels together with one process:
+     aibox_aa2 -s rtsp://192.168.33.123:5000/test -t rtsp -p 2 
+               -s /usr/share/somapp/movies/AA2/AA2-shop.nv12.30fps.1080p.h264 -t file -p 1
 
-       Only one aibox_aa2 process could be actually running, because it requires locked access to DPU, and there is just one in aibox platform.
+   * Only one aibox_aa2 process could be actually running, because it requires locked access to DPU, and there is just one in aibox platform.
 
-   * Known Limitations or issues under debug:
+## Known Limitations or issues under debug:
 
-      * When you use smartcam_aa1 as file based RTSP server as [here](#Setup-RTSP-server) states or use file type source, because the video file is played in an infinite loop, you may notice that when a new loop starts the tracking ID of the same person will change to a new one. This is not the algorithm issue or bug, but because the algorithm will take the motion trail of the object into account, so a sudden change of scene will cause the generation of the new ID.
+   * When you use smartcam_aa1 as file based RTSP server as [here](#Setup-RTSP-server) states or use file type source, because the video file is played in an infinite loop, you may notice that when a new loop starts the tracking ID of the same person will change to a new one. This is not the algorithm issue or bug, but because the algorithm will take the motion trail of the object into account, so a sudden change of scene will cause the generation of the new ID.
 
-      * Stream may freeze after some time if you use this SOM as RTSP server as 3.b)i) and leave AA2 application running for extended period of time.
+   * Stream may freeze after some time if you use this SOM as RTSP server as 3.b)i) and leave AA2 application running for extended period of time.
 
-      * After start the application, Sometimes the screen still does not show anyting. To fix this, unplug and replug the DP/HDMI cable.
+   * After start the application, Sometimes the screen still does not show anyting. To fix this, unplug and replug the DP/HDMI cable.
 
-      * There is a small memory leak when aibox_aa2 is running.
+   * When multiple streams are active, the image displayed can be laggy. 
 
-      * When streaming from other RTSP sources (than the [locally started one](#setup-rtsp-server), you may notice some extra seconds of lag occassionally
+## Command Option:
 
-      * When multiple streams are active, the image displayed can be laggy. 
-
-4. Command Option:
-
->      Usage:
+>     Usage:
 >
 >     aibox_aa2 [OPTION?] - AI Application of pedestrian + reid + tracking for multi RTSP streams, on SoM board of 
 >      Help Options:
