@@ -79,10 +79,6 @@ install(FILES
     RENAME      README_AA2
     )
 
-install(PROGRAMS
-    script/aa2.sh
-    DESTINATION ${INSTALL_PATH}/bin)
-
 install(FILES
     config/ped_pp.json
     config/refinedet.json
