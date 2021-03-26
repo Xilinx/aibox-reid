@@ -140,7 +140,7 @@ int32_t xlnx_kernel_init(IVASKernel *handle) {
   else
     kernel_priv->debug = json_number_value(val);
 
-  kernel_priv->det = vitis::ai::Reid::create("/opt/xilinx/share/vitis_ai_library/models/personreid-res18_pt/personreid-res18_pt.xmodel");
+  kernel_priv->det = vitis::ai::Reid::create("/opt/xilinx/share/vitis_ai_library/models/kv260-aibox-reid/personreid-res18_pt/personreid-res18_pt.xmodel");
   kernel_priv->tracker = vitis::ai::ReidTracker::create();
 
   handle->kernel_priv = (void *)kernel_priv;

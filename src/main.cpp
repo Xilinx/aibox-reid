@@ -140,7 +140,7 @@ main (int argc, char *argv[])
     g_clear_error (&error);
 
 
-    std::string confdir("/opt/xilinx/share/ivas/aibox_aa2");
+    std::string confdir("/opt/xilinx/share/ivas/aibox-reid");
     char pip[12500];
     pip[0] = '\0';
 
