@@ -3,129 +3,174 @@
 
    If you want to build from source, follow these steps, otherwise skip this section.
 
-   1) Install the SoM sdk.sh to the path you choose or default. Suppose SDKPATH.
+   1) Install the SoM `sdk.sh` to the path you choose or default. Suppose SDKPATH.
    2) Run "./build.sh ${SDKPATH}" to build the somapp application.
-   3) The build process in 2) will produce a rpm package SoMApp-1.0.1-1.aarch64.rpm under build/, upload to the board,
-      and run "rmp -ivh --force ./AIbox_aa2-1.0.1-1.aarch64.rpm" to update install.
+   3) The build process in 2) will produce a rpm package aibox-reid-1.0.1-1.aarch64.rpm under build/, upload to the board,
+      and run "rmp -ivh --force ./aibox-reid-1.0.1-1.aarch64.rpm" to update install.
 
+# Setting up the Board
 
-# File structure
+1. Hardware Setup:
 
-The application is installed as:
+    * Monitor:
+    
+      This application requires **4K** monitor, so that up to 4 channels of 1080p video could be displayed.
 
-Binary File: => /opt/xilinx/bin
+      Before booting the board, please connect the monitor to the board via either DP or HDMI port.
+    
+    * UART/JTAG interface:
+    
+      For interacting and seeing boot-time information, connect a USB debugger to the J4.
+    
+    * Network connection:
+    
+      Connect the Ethernet cable to your local network with DHCP enabled or a direct PC connection with a static IP configuration.
+ 
+2.  Get the latest application package.
 
-aibox_aa2                   main app
+    1.  Get the list of available packages in the feed.
 
-configuration File: => /opt/xilinx/share/ivas/aibox_aa2
+        `xmutil      getpkgs`
 
-|||
-|-|-|
-|ped_pp.json   |Config of preprocess for refinedet.
-| refinedet.json   |           Config of refinedet.
-| crop.json        |           Config of cropping for reid.
-| reid.json        |           Config of reid.
-| draw_reid.json   |           Config of final results drawing.
+    2.  Install the package with dnf install:
 
-**REMOVED for legal issue** Example video files: => /usr/share/somapp/movies/AA2
+        `sudo dnf install packagegroup-kv260-aibox-reid.noarch`
 
-# Fireware Loading
+3.  Dynamically load the application package.
 
-The accelerated application (AA) firmware consist of bitstream, device tree overlay (dtbo) and xclbinfile. The AA firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used for that purpose.
-   1. To list the available AA applications, run:
+    The firmware consist of bitstream, device tree overlay (dtbo) and xclbin file. The firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used for that purpose.
 
-         `xmutil listapps`
+    1. Show the list and status of available acceleration platforms and AI Applications:
 
-         You should see similar output to this:
+        `xmutil      listapps`
 
->         Accelerator,              Type,   Active
->         kv260-aibox-aa2,          flat,   0
->         kv260-smartcamera-aa1,    flat,   0
+    2.  Switch to a different platform for different AI Application:
 
-         The Active column shows which AA is currently loaded in the system. It will change to 1 after the firmware is loaded.
+        *  When there's no active accelerator by inspecting with xmutil listapps, just active the one you want to switch.
 
-   2. To load the AA1 application firmware consisting of PL bitstream, device tree overlay and xclbin,
+            `xmutil      loadapp kv260-aibox-reid`
 
-         run the following command:
+        *  When there's already an accelerator being activated, unload it first, then switch to the one you want.
 
-         `xmutil loadapp kv260-aibox-aa2`
+            `xmutil      unloadapp `
 
-   3. After you are done running the application, you can unload the curently loaded AA application firmware by running:
-
-         `xmutil unloadapp`
+            `xmutil      loadapp kv260-aibox-reid`
 
 # How to run application:
 
-## Prerequisites:
+## Two types of input source
 
-### Monitor
+The AIBOX application is targeted to run wih RTSP streams as input source, but for convienience, we also support video files source as input.
 
-This application needs 4K monitor, so that up to 4 channels of 1080p video could be displayed.
+We assume the RTSP or video file to be **1080P H264/H265**
 
-Before booting the board, please connect the monitor to the board via either DP or HDMI port.
+   * RTSP source
+   
+     IP camerars normally have configuration page to configure the RTSP stream related parameter, please refer to the manual of you camera, and configure it to **1080P H264/H265**, and get the RTSP URL to use as input parameter of the application as bellow.
+     The URL is in the form of "rtsp://user:passwd@ip-address:port/name"
 
-## Setup RTSP server
 
-   * If no RTSP server on hand, smartcam_aa1 can be used as the RTSP server on the AA2 platform, with -n option, which turn off the server side AI inference.
+   * File source
 
-      e.g. 
+      To be able to demostrate the function of the application in case you have no IP camera in hand, we support the file video source too.
+  
+      You can download video files from the following links, which is of MP4 format, you can transcode it to what we required with following command.
+  
+      > ffmpeg -i input-video.mp4 -c:v libx264 -pix_fmt nv12 -r 30 output.nv12.h264
 
-      `smartcam_aa1 -f /usr/share/somapp/movies/AA2/AA2-park.nv12.30fps.1080p.h264 -W 1920 -H 1080 -r 30 -t rtsp -p 5000 -n &`
+      Demo videos:
 
-      console output example:
+      * https://pixabay.com/videos/liverpool-people-couple-pier-head-46090/
+      * https://pixabay.com/videos/liverpool-pier-head-england-uk-46098/
+      * https://pixabay.com/videos/spring-walk-park-trees-flowers-15252/
+      * https://pixabay.com/videos/walking-people-city-bucharest-6099/
 
-      `stream ready at:`
+## There are two ways to interact with the application. 
 
-      `rtsp://192.168.33.123:5000/test`
+### Juypter notebook.
 
-      **note** 192.168.33.123 will be your local network IP.
+    Use a web-browser (e.g. Chrome, Firefox) to interact with the platform.
 
-   * If using a direct connection (no DHCP) see AA1 read me on how to set IP address.
+    The Jupyter notebook URL can be find with command:
 
-     To setup multiple servers you can use different "-p port" option to get different rtsp addresses.
+> sudo jupyter notebook list
 
-   * You may also use other RTSP sources, such as an IP camera. 
+    Output example:
 
-## Run AA2 application:
-
-   * Run one channel with one process:
-      aibox_aa2 -s rtsp://192.168.33.123:5000/test -t rtsp -p 0 
-
-   * Run multiple channels together with one process:
-     aibox_aa2 -s rtsp://192.168.33.123:5000/test -t rtsp -p 2 
-               -s /usr/share/somapp/movies/AA2/AA2-shop.nv12.30fps.1080p.h264 -t file -p 1
-
-   * Only one aibox_aa2 process could be actually running, because it requires locked access to DPU, and there is just one in aibox platform.
-
-## Known Limitations or issues under debug:
-
-   * When you use smartcam_aa1 as file based RTSP server as [here](#Setup-RTSP-server) states or use file type source, because the video file is played in an infinite loop, you may notice that when a new loop starts the tracking ID of the same person will change to a new one. This is not the algorithm issue or bug, but because the algorithm will take the motion trail of the object into account, so a sudden change of scene will cause the generation of the new ID.
-
-   * Stream may freeze after some time if you use this SOM as RTSP server as 3.b)i) and leave AA2 application running for extended period of time.
-
-   * After start the application, Sometimes the screen still does not show anyting. To fix this, unplug and replug the DP/HDMI cable.
-
-   * When multiple streams are active, the image displayed can be laggy. 
-
-## Command Option:
-
->     Usage:
+> Currently running servers:
 >
->     aibox_aa2 [OPTION?] - AI Application of pedestrian + reid + tracking for multi RTSP streams, on SoM board of 
->      Help Options:
->
->        -h, --help                                       Show help options
->        --help-all                                       Show all help options
->        --help-gst                                       Show GStreamer Options
->
->      Application Options:
->
->        -s, --src=[rtsp://server:port/id |file path]     URI of rtsp src, or location of h264|h265 video file. Must set. Can set up to 4 times
->        -t, --srctype=[f|file, r|rtsp]                   Type of the input source: file (f)|rtsp (r). Optional. Can set up to 4 times.
->        -e, --srcenc=[h264|h265]                         Encoding type of the input source. Optional. Can set up to 4 times.
->        -p, --pos=[0|1|2|3]                              Location of the display in the 4 grids of 4k monitor. Optional. 
->                                                         0: top left, 1: top right, 2: bottom left, 3: bottom right. Optional. Can set up to 4 times.
->        -R, --report                                     Report fps
+> `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: /opt/xilinx/share/notebooks
 
+### Comman Line
+
+**Notice** The application need to be ran with ***sudo*** .
+
+#### Examples:
+
+   * Run one channel RTSP stream 
+      > sudo aibox-reid -s rtsp://192.168.3.123:5000/test -t rtsp -p 0 
+
+   * Run one channel video file
+      > sudo aibox-reid -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
+
+   * Run multiple channels
+     > sudo aibox-reid -s rtsp://192.168.3.123:5000/test -t rtsp -p 2 
+     >           -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1 
+
+   **notice** Only one aibox-reid process could be actually running, because it requires locked access to DPU, and there is just one in aibox-reid platform.
+
+#### Command Option:
+
+The examples show the capability of the aibox-reid for specific configurations. User can get more and detailed application options as following by invoking 
+
+`   aibox-reid --help`
+
+```
+   Usage:
+
+   aibox-reid [OPTION?] - AI Application of pedestrian + reid + tracking for multi RTSP streams, on SoM board of 
+
+   Help Options:
+
+   -h, --help      Show help options
+
+        --help-all                                       Show all help options
+        --help-gst                                       Show GStreamer Options
+
+   Application Options:
+
+        -s, --src=[rtsp://server:port/id |file path]     URI of rtsp src, or location of h264|h265 video file. Must set. Can set up to 4 times
+        -t, --srctype=[f|file, r|rtsp]                   Type of the input source: file (f)|rtsp (r). Optional. Can set up to 4 times.
+        -e, --srcenc=[h264|h265]                         Encoding type of the input source. Optional. Can set up to 4 times.
+        -p, --pos=[0|1|2|3]                              Location of the display in the 4 grids of 4k monitor. Optional. 
+                                                         0: top left, 1: top right, 2: bottom left, 3: bottom right. Optional. Can set up to 4 times.
+        -R, --report                                     Report fps
+```
+
+# Files structure of the application
+
+* The application is installed as:
+
+  * Binary File: => /opt/xilinx/bin
+
+      | filename | description |
+      |----------|-------------|
+      |aibox-reid| main app|
+
+  * configuration File: => /opt/xilinx/share/ivas/aibox-reid
+
+      | filename | description |
+      |-|-|
+      |ped_pp.json       |           Config of preprocess for refinedet.
+      | refinedet.json   |           Config of refinedet.
+      | crop.json        |           Config of cropping for reid.
+      | reid.json        |           Config of reid.
+      | draw_reid.json   |           Config of final results drawing.
+
+   * Jupyter notebook file: => /opt/xilinx/share/notebooks/aibox-reid
+
+     | filename | description |
+     |----------|-------------|
+     |aibox-reid.ipynb | Jupyter notebook file for aibox-reid.|
 
 <p align="center"><sup>Copyright&copy; 2021 Xilinx</sup></p>
