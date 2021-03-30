@@ -24,6 +24,7 @@
 #include <memory>
 #include <stdexcept>
 #include <unistd.h>
+#include <sys/types.h>
 
 static gchar* DEFAULT_SRC_TYPE = (gchar*)"r";
 static gchar* DEFAULT_SRC_ENC = (gchar*)"h264";
@@ -139,6 +140,10 @@ main (int argc, char *argv[])
     g_option_context_free (optctx);
     g_clear_error (&error);
 
+    if (getuid() != 0) {
+      g_printerr ("Please run with sudo.\n");
+      return 1;
+    }
 
     std::string confdir("/opt/xilinx/share/ivas/aibox-reid");
     char pip[12500];
