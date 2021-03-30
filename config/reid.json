@@ -6,6 +6,8 @@
     {
       "library-name": "libivas_reid.so",
       "config": {
+          "model-path": "/opt/xilinx/share/vitis_ai_library/models/kv260-aibox-reid/",
+          "model-name": "personreid-res18_pt",
           "debug": 0
       }
     }

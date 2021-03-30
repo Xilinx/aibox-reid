@@ -32,6 +32,8 @@
 #define MAX_REID 20
 #define DEFAULT_REID_THRESHOLD 0.2
 #define DEFAULT_REID_DEBUG     0
+#define DEFAULT_MODEL_NAME     "personreid-res18_pt"
+#define DEFAULT_MODEL_PATH     "/opt/xilinx/share/vitis_ai_library/models/kv260-aibox-reid"
 
 using namespace std;
 
@@ -46,6 +48,8 @@ struct _Face {
 typedef struct _kern_priv {
   uint32_t debug;
   double threshold;
+  std::string modelpath;
+  std::string modelname;
   std::shared_ptr<vitis::ai::Reid> det;
   std::shared_ptr<vitis::ai::ReidTracker> tracker;
 } ReidKernelPriv;
@@ -140,7 +144,23 @@ int32_t xlnx_kernel_init(IVASKernel *handle) {
   else
     kernel_priv->debug = json_number_value(val);
 
-  kernel_priv->det = vitis::ai::Reid::create("/opt/xilinx/share/vitis_ai_library/models/kv260-aibox-reid/personreid-res18_pt/personreid-res18_pt.xmodel");
+  val = json_object_get(jconfig, "model-name");
+  if (!val || !json_is_string (val))
+    kernel_priv->modelname = DEFAULT_MODEL_NAME;
+  else
+    kernel_priv->modelname = (char *) json_string_value (val);
+
+  val = json_object_get(jconfig, "model-path");
+  if (!val || !json_is_string (val))
+    kernel_priv->modelpath = DEFAULT_MODEL_PATH;
+  else
+    kernel_priv->modelpath = (char *) json_string_value (val);
+
+  std::string xmodelfile = kernel_priv->modelpath + "/" + kernel_priv->modelname + "/" + kernel_priv->modelname + ".xmodel";
+  kernel_priv->det = vitis::ai::Reid::create(xmodelfile);
+  if (kernel_priv->det.get() == NULL) {
+    printf("Error: Unable to create Reid runner with model %s.\n", xmodelfile.c_str());
+  }
   kernel_priv->tracker = vitis::ai::ReidTracker::create();
 
   handle->kernel_priv = (void *)kernel_priv;
@@ -158,6 +178,10 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
                           IVASFrame *output[MAX_NUM_OBJECT]) {
   IVASFrame *in_ivas_frame = input[0];
   ReidKernelPriv *kernel_priv = (ReidKernelPriv *)handle->kernel_priv;
+  if ( !kernel_priv->det.get() || !kernel_priv->tracker.get() ) {
+    return 1;
+  }
+
   static int frame_num = 0;
   frame_num++;
   std::vector<vitis::ai::ReidTracker::InputCharact> input_characts;
