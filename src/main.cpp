@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+static char *msgFirmware = (char *)"Please make sure that the HW accelerator firmware is loaded via xmutil loadapp kv260-aibox-reid.\n";
 static gchar* DEFAULT_SRC_TYPE = (gchar*)"r";
 static gchar* DEFAULT_SRC_ENC = (gchar*)"h264";
 static gchar** srctypes = NULL;
@@ -157,13 +158,13 @@ main (int argc, char *argv[])
 
     if (access("/dev/allegroDecodeIP", F_OK) != 0)
     {
-        g_printerr("ERROR: VCU decoder is not ready.\n");
+        g_printerr("ERROR: VCU decoder is not ready.\n%s", msgFirmware);
         return 1;
     }
 
     if (access("/dev/dri/by-path/platform-80000000.v_mix-card", F_OK) != 0)
     {
-        g_printerr("ERROR: Mixer device is not ready.\n");
+        g_printerr("ERROR: Mixer device is not ready.\n%s", msgFirmware);
         return 1;
     }
     else 
