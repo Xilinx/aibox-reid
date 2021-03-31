@@ -268,7 +268,7 @@ main (int argc, char *argv[])
         if (pos >= 0 && pos <= 3)
         {
             sprintf(pip + strlen(pip),
-                    "! kmssink bus-id=80000000.v_mix plane-id=%d render-rectangle=\"<%d,%d,1920,1080>\" show-preroll-frame=false sync=false can-scale=false "
+                    "! kmssink bus-id=80000000.v_mix plane-id=%d render-rectangle=\"<%d,%d,1920,1080>\" show-preroll-frame=false sync=false "
                     , 34+validsrc, pos%2*1920, pos/2*1080);
         }
         else
