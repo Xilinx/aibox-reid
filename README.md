@@ -11,7 +11,9 @@ If you want to cross compile the source in Linux PC machine, follow these steps,
 
 # Setting up the Board
 
-1. Hardware Setup:
+1. Get the SD Card Image from [Boot Image Site](http://xilinx.com/) and follow the instructions in UG1089 to burn the SD card. And install the SD card to J11.
+
+2. Hardware Setup:
 
     * Monitor:
     
@@ -25,102 +27,107 @@ If you want to cross compile the source in Linux PC machine, follow these steps,
     
     * Network connection:
     
-      Connect the Ethernet cable to your local network with DHCP enabled or a direct PC connection with a static IP configuration.
+      Connect the Ethernet cable to your local network with DHCP enabled to install packages and run Jupyter Notebooks
  
-2.  Get the latest application package.
+3. Power on the board, login with username `petalinux`, and you need to setup the password for the first time bootup.
+
+4.  Get the latest application package.
 
     1.  Get the list of available packages in the feed.
 
-        `xmutil      getpkgs`
+        `sudo xmutil      getpkgs`
 
     2.  Install the package with dnf install:
 
         `sudo dnf install packagegroup-kv260-aibox-reid.noarch`
+        
+      Note: For setups without access to the internet, it is possible to download and use the packages locally. Please refer to the `K260 SOM Starter Kit Tutorial` for instructions.
 
-3.  Dynamically load the application package.
+5.  Dynamically load the application package.
 
     The firmware consist of bitstream, device tree overlay (dtbo) and xclbin file. The firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used for that purpose.
 
-    1. Show the list and status of available acceleration platforms and AI Applications:
+    1. Shows the list and status of available acceleration platforms and AI Applications:
 
-        `xmutil      listapps`
+        `sudo xmutil      listapps`
 
     2.  Switch to a different platform for different AI Application:
 
-        *  When there's no active accelerator by inspecting with xmutil listapps, just active the one you want to switch.
+        *  When xmutil listapps reveals that no accelerator is currently active, select the desired application:
 
-            `xmutil      loadapp kv260-aibox-reid`
+            `sudo xmutil      loadapp kv260-aibox-reid`
 
-        *  When there's already an accelerator being activated, unload it first, then switch to the one you want.
+        *  When xmutil listapps reveals that an accellerator is already active, unload it first, then select the desired application:
 
-            `xmutil      unloadapp `
+            `sudo xmutil      unloadapp `
 
-            `xmutil      loadapp kv260-aibox-reid`
+            `sudo xmutil      loadapp kv260-aibox-reid`
 
-# How to run application:
+# How to run the application:
 
-## Two types of input source
+## Two types of input sources
 
-The AIBOX application is targeted to run wih RTSP streams as input source, but for convienience, we also support video files source as input.
+The AIBOX application is targeted to run with RTSP streams as input source, but for convienience, we also support video files as input.
 
 We assume the RTSP or video file to be **1080P H264/H265**
 
-   * RTSP source
+   * RTSP source <a name="rtsp-source"> </a>
    
-     IP camerars normally have configuration page to configure the RTSP stream related parameter, please refer to the manual of you camera, and configure it to **1080P H264/H265**, and get the RTSP URL to use as input parameter of the application as bellow.
-     The URL is in the form of "rtsp://user:passwd@ip-address:port/name"
+     IP camerars normally have a configuration page to configure the RTSP stream related parameters. Please refer to the manual of your camera, and configure it to **1080P H264/H265**, and get the RTSP URL to be used as input parameter for the AIBox application. The URL is in the form of "rtsp://user:passwd@ip-address:port/name"
 
 
    * File source
 
-      To be able to demostrate the function of the application in case you have no IP camera in hand, we support the file video source too.
-  
-      You can download video files from the following links, which is of MP4 format, you can transcode it to what we required with following command.
-  
-      > ffmpeg -i input-video.mp4 -c:v libx264 -pix_fmt nv12 -r 30 output.nv12.h264
-
-      Demo videos:
+      To demonstrate the application in the case where no IP camera is available, a video source may be played from a file on the SD card instead.
+      You can download video files from the following links, which is of MP4 format.
 
       * https://pixabay.com/videos/liverpool-people-couple-pier-head-46090/
       * https://pixabay.com/videos/liverpool-pier-head-england-uk-46098/
       * https://pixabay.com/videos/spring-walk-park-trees-flowers-15252/
       * https://pixabay.com/videos/walking-people-city-bucharest-6099/
 
-## There are two ways to interact with the application. 
+      Then you need to transcode it to H264 file which is the supported input format.
 
-### Juypter notebook.
+      > ffmpeg -i input-video.mp4 -c:v libx264 -pix_fmt nv12 -r 30 output.nv12.h264
 
-    Use a web-browser (e.g. Chrome, Firefox) to interact with the platform.
+      Finally, please upload or copy these transcoded H264 files to the board, place it to somewhere under /home/petalinux, which is the home directory of the user you login as.
 
-    The Jupyter notebook URL can be find with command:
+## Interacting with the application
+
+There are two ways to interact with application, via Jyputer notebook or Command line 
+
+### Juypter notebook
+
+Use a web-browser (e.g. Chrome, Firefox) to interact with the platform.
+
+The Jupyter notebook URL can be found with command:
 
 > sudo jupyter notebook list
 
-    Output example:
+Output example:
 
 > Currently running servers:
 >
 > `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: /opt/xilinx/share/notebooks
 
-### Comman Line
+### Command Line
 
-**Notice** The application need to be ran with ***sudo*** .
+**Note** The application needs to be run with ***sudo*** .
 
 #### Examples:
 
    * Run one channel RTSP stream 
-      > sudo aibox-reid -s rtsp://192.168.3.123:5000/test -t rtsp -p 0 
+      > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 0 
 
    * Run one channel video file
       > sudo aibox-reid -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
 
    * Run multiple channels
-     > sudo aibox-reid -s rtsp://192.168.3.123:5000/test -t rtsp -p 2 
-     >           -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1 
+     > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 2 -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1 
 
-   **notice** Only one aibox-reid process could be actually running, because it requires locked access to DPU, and there is just one in aibox-reid platform.
+   **Note** Only one instance of aibox-reid application can run at a time because it requires exclusive access to a DPU engine and there is only one instance of DPU that exists in the aibox-reid platform.
 
-#### Command Option:
+#### Command Options:
 
 The examples show the capability of the aibox-reid for specific configurations. User can get more and detailed application options as following by invoking 
 
@@ -129,7 +136,7 @@ The examples show the capability of the aibox-reid for specific configurations. 
 ```
    Usage:
 
-   aibox-reid [OPTION?] - AI Application of pedestrian + reid + tracking for multi RTSP streams, on SoM board of 
+   aibox-reid [OPTION?] - AI Application of pedestrian + reid + tracking for multi RTSP streams, on SoM board of Xilinx
 
    Help Options:
 
@@ -148,17 +155,17 @@ The examples show the capability of the aibox-reid for specific configurations. 
         -R, --report                                     Report fps
 ```
 
-# Files structure of the application
+# Files structure
 
 * The application is installed as:
 
-  * Binary File: => /opt/xilinx/bin
+  * Binary File Directory: /opt/xilinx/bin
 
       | filename | description |
       |----------|-------------|
       |aibox-reid| main app|
 
-  * configuration File: => /opt/xilinx/share/ivas/aibox-reid
+  * Configuration file directory: /opt/xilinx/share/ivas/aibox-reid
 
       | filename | description |
       |-|-|
@@ -168,7 +175,7 @@ The examples show the capability of the aibox-reid for specific configurations. 
       | reid.json        |           Config of reid.
       | draw_reid.json   |           Config of final results drawing.
 
-   * Jupyter notebook file: => /opt/xilinx/share/notebooks/aibox-reid
+   * Jupyter Notebook Directory: /opt/xilinx/share/notebooks/aibox-reid
 
      | filename | description |
      |----------|-------------|
