@@ -162,14 +162,14 @@ main (int argc, char *argv[])
         return 1;
     }
 
-    if (access("/dev/dri/by-path/platform-80000000.v_mix-card", F_OK) != 0)
+    if (access("/dev/dri/by-path/platform-b0000000.v_mix-card", F_OK) != 0)
     {
         g_printerr("ERROR: Mixer device is not ready.\n%s", msgFirmware);
         return 1;
     }
     else 
     {
-        exec("echo | modetest -M xlnx -D 80000000.v_mix -s 52@40:3840x2160@NV16");
+        exec("echo | modetest -M xlnx -D b0000000.v_mix -s 52@40:3840x2160@NV16");
     }
 
     int numNonZero = 0, numSrcs = 0, numSrcTypes = 0, numSrcEncs = 0, numPoses = 0;
@@ -269,7 +269,7 @@ main (int argc, char *argv[])
         if (pos >= 0 && pos <= 3)
         {
             sprintf(pip + strlen(pip),
-                    "! kmssink bus-id=80000000.v_mix plane-id=%d render-rectangle=\"<%d,%d,1920,1080>\" show-preroll-frame=false sync=false "
+                    "! kmssink bus-id=b0000000.v_mix plane-id=%d render-rectangle=\"<%d,%d,1920,1080>\" show-preroll-frame=false sync=false "
                     , 34+validsrc, pos%2*1920, pos/2*1080);
         }
         else
