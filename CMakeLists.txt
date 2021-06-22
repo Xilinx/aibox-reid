@@ -73,6 +73,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
   glib-2.0 gobject-2.0 )
 install(TARGETS ${CMAKE_PROJECT_NAME} DESTINATION ${INSTALL_PATH}/bin)
 
+install(PROGRAMS
+    script/aibox-reid-install.py
+    DESTINATION ${INSTALL_PATH}/bin)
+
 install(FILES
     README
     DESTINATION ${INSTALL_PATH}/
