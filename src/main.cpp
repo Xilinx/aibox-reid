@@ -29,11 +29,12 @@
 static char *msgFirmware = (char *)"Please make sure that the HW accelerator firmware is loaded via xmutil loadapp kv260-aibox-reid.\n";
 static gchar* DEFAULT_SRC_TYPE = (gchar*)"r";
 static gchar* DEFAULT_SRC_ENC = (gchar*)"h264";
+static gchar* DEFAULT_FRAME_RATE = (gchar*)"30";
 static gchar** srctypes = NULL;
 static gchar** srcencs = NULL;
 static gchar** srcs= NULL;
 static gchar** poses = NULL;
-static gint   fr = 30;
+static gchar** frs = NULL;
 static gint w = 1920;
 static gint h = 1080;
 static gboolean reportFps = FALSE;
@@ -45,7 +46,7 @@ static GOptionEntry entries[] =
     { "pos", 'p', 0, G_OPTION_ARG_STRING_ARRAY, &poses, "Location of the display in the 4 grids of 4k monitor. Optional. 0: top left, 1: top right, 2: bottom left, 3: bottom right. Optional. Can set up to 4 times.", "[0|1|2|3]"},
 //    { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
 //    { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
-//    { "framerate", 'r', 0, G_OPTION_ARG_INT, &fr, "framerate of the input", "30"},
+    { "framerate", 'r', 0, G_OPTION_ARG_STRING_ARRAY, &frs, "Framerate of the input. Optional. Can set up to 4 times.", "30"},
     { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "Report fps", NULL },
     { NULL }
 };
@@ -172,13 +173,14 @@ main (int argc, char *argv[])
         exec("echo | modetest -M xlnx -D b0000000.v_mix -s 52@40:3840x2160@NV16");
     }
 
-    int numNonZero = 0, numSrcs = 0, numSrcTypes = 0, numSrcEncs = 0, numPoses = 0;
+    int numNonZero = 0, numSrcs = 0, numSrcTypes = 0, numSrcEncs = 0, numPoses = 0, numFrs = 0;
     if ( GetArgArraySizeCheckSameForNonZero(srcs,     numSrcs,     numNonZero) != 0
       || GetArgArraySizeCheckSameForNonZero(srctypes, numSrcTypes, numNonZero) != 0
       || GetArgArraySizeCheckSameForNonZero(srcencs,  numSrcEncs,  numNonZero) != 0
+      || GetArgArraySizeCheckSameForNonZero(frs,       numFrs,       numNonZero) != 0
       || GetArgArraySizeCheckSameForNonZero(poses,    numPoses,    numNonZero) != 0 ) 
     {
-        g_printerr("Error: The num of args srctype, srcenc, and pos should be the same as num of src, if you need to set them to non-empty.\n");
+        g_printerr("Error: The num of args srctype, srcenc, framerate, and pos should be the same as num of src, if you need to set them to non-empty.\n");
         return 1;
     }
 
@@ -218,6 +220,7 @@ main (int argc, char *argv[])
         }
         char* srctype = numSrcTypes == numSrcs ? srctypes[i] : DEFAULT_SRC_TYPE;
         char* srcenc = numSrcEncs == numSrcs ? srcencs[i] : DEFAULT_SRC_ENC;
+        char* fr = numFrs == numSrcs ? frs[i] : DEFAULT_FRAME_RATE;
         char* src = srcs[i];
         std::ostringstream srcOss;
         std::string queue = "";
@@ -239,7 +242,7 @@ main (int argc, char *argv[])
         sprintf(pip + strlen(pip),
                 " %s \
                 ! %sparse ! queue ! omx%sdec \
-                ! video/x-raw, format=NV12 %s \
+                ! video/x-raw, format=NV12, framerate=%s/1 %s \
                 ! tee name=t%d t%d.src_0 ! queue \
                 ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
                 ! queue ! ivas_xfilter name=refinedet_%d kernels-config=\"%s/refinedet.json\" \
@@ -253,7 +256,7 @@ main (int argc, char *argv[])
                 ! queue %s "
                 , srcOss.str().c_str()
                 , srcenc, srcenc
-                , queue.c_str()
+                , fr, queue.c_str()
                 , i, i
                 , confdir.c_str()
                 , i, confdir.c_str()
@@ -269,8 +272,8 @@ main (int argc, char *argv[])
         if (pos >= 0 && pos <= 3)
         {
             sprintf(pip + strlen(pip),
-                    "! kmssink bus-id=b0000000.v_mix plane-id=%d render-rectangle=\"<%d,%d,1920,1080>\" show-preroll-frame=false sync=false "
-                    , 34+validsrc, pos%2*1920, pos/2*1080);
+                    "! kmssink bus-id=b0000000.v_mix plane-id=%d render-rectangle=\"<%d,%d,1920,1080>\" show-preroll-frame=false sync=%s can-scale=false"
+                    , 34+validsrc, pos%2*1920, pos/2*1080, std::string(srcenc)=="h265" && std::string(fr)!="30" ? "true" : "false" );
         }
         else
         {
