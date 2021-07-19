@@ -21,7 +21,7 @@ project(aibox-reid)
 SET(CMAKE_INSTALL_PREFIX $ENV{OECORE_TARGET_SYSROOT})
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing -fpermissive -rdynamic -Wl,--no-undefined" )
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -std=c++14")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -std=c++17")
 SET(CMAKE_CXX_FLAGS_DEBUG "-O0")
 SET(CMAKE_C_FLAGS_DEBUG "-O0")
 
