@@ -29,7 +29,7 @@
 static char *msgFirmware = (char *)"Please make sure that the HW accelerator firmware is loaded via xmutil loadapp kv260-aibox-reid.\n";
 static gchar* DEFAULT_SRC_TYPE = (gchar*)"r";
 static gchar* DEFAULT_SRC_ENC = (gchar*)"h264";
-static gchar* DEFAULT_FRAME_RATE = (gchar*)"30";
+static gchar* DEFAULT_FRAME_RATE = (gchar*)"auto";
 static gchar** srctypes = NULL;
 static gchar** srcencs = NULL;
 static gchar** srcs= NULL;
@@ -46,7 +46,7 @@ static GOptionEntry entries[] =
     { "pos", 'p', 0, G_OPTION_ARG_STRING_ARRAY, &poses, "Location of the display in the 4 grids of 4k monitor. Optional. 0: top left, 1: top right, 2: bottom left, 3: bottom right. Optional. Can set up to 4 times.", "[0|1|2|3]"},
 //    { "width", 'W', 0, G_OPTION_ARG_INT, &w, "resolution w of the input", "1920"},
 //    { "height", 'H', 0, G_OPTION_ARG_INT, &h, "resolution h of the input", "1080"},
-    { "framerate", 'r', 0, G_OPTION_ARG_STRING_ARRAY, &frs, "Framerate of the input. Optional. Can set up to 4 times.", "30"},
+    { "framerate", 'r', 0, G_OPTION_ARG_STRING_ARRAY, &frs, "Framerate of the input. Optional. Can set up to 4 times.", DEFAULT_FRAME_RATE},
     { "report", 'R', 0, G_OPTION_ARG_NONE, &reportFps, "Report fps", NULL },
     { NULL }
 };
@@ -221,6 +221,20 @@ main (int argc, char *argv[])
         char* srctype = numSrcTypes == numSrcs ? srctypes[i] : DEFAULT_SRC_TYPE;
         char* srcenc = numSrcEncs == numSrcs ? srcencs[i] : DEFAULT_SRC_ENC;
         char* fr = numFrs == numSrcs ? frs[i] : DEFAULT_FRAME_RATE;
+
+        std::ostringstream framerateOss;
+        long ret=0;
+        char* tmp = NULL;
+        ret = strtol(fr, &tmp, 10);
+        if (strlen(tmp) != 0 || ret == 0)
+        {
+            framerateOss << "";
+        }
+        else
+        {
+            framerateOss << ", framerate=" << ret << "/1";
+        }
+
         char* src = srcs[i];
         std::ostringstream srcOss;
         std::string queue = "";
@@ -242,7 +256,7 @@ main (int argc, char *argv[])
         sprintf(pip + strlen(pip),
                 " %s \
                 ! %sparse ! queue ! omx%sdec \
-                ! video/x-raw, format=NV12, framerate=%s/1 %s \
+                ! video/x-raw, format=NV12 %s %s \
                 ! tee name=t%d t%d.src_0 ! queue \
                 ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
                 ! queue ! ivas_xfilter name=refinedet_%d kernels-config=\"%s/refinedet.json\" \
@@ -256,7 +270,7 @@ main (int argc, char *argv[])
                 ! queue %s "
                 , srcOss.str().c_str()
                 , srcenc, srcenc
-                , fr, queue.c_str()
+                , framerateOss.str().c_str(), queue.c_str()
                 , i, i
                 , confdir.c_str()
                 , i, confdir.c_str()
