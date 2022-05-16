@@ -1,10 +1,10 @@
 {
   "xclbin-location":"/usr/lib/dpu.xclbin",
-  "ivas-library-repo": "/opt/xilinx/lib/",
+  "vvas-library-repo": "/opt/xilinx/lib/",
   "element-mode":"inplace",
   "kernels" :[
     {
-      "library-name":"libivas_drawreid.so",
+      "library-name":"libvvas_drawreid.so",
       "config": {
         "font_size" : 3,
         "font" : 3,

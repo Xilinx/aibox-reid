@@ -20,8 +20,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <iostream>
 #include <math.h>
-#include <ivas/ivas_kernel.h>
-#include <gst/ivas/gstinferencemeta.h>
+#include <vvas/vvas_kernel.h>
+#include <gst/vvas/gstinferencemeta.h>
 #define __STDC_FORMAT_MACROS 1
 #include <stdint.h>
 
@@ -72,14 +72,14 @@ struct color
   unsigned int red;
 };
 
-struct ivass_xclassification
+struct vvass_xclassification
 {
   color class_color;
   char class_name[MAX_CLASS_LEN];
 };
 
 
-struct ivas_xoverlaypriv
+struct vvas_xoverlaypriv
 {
   float font_size;
   unsigned int font;
@@ -89,7 +89,7 @@ struct ivas_xoverlaypriv
   char label_filter[MAX_ALLOWED_LABELS][MAX_LABEL_LEN];
   unsigned char label_filter_cnt;
   unsigned short classes_count;
-  ivass_xclassification class_list[MAX_ALLOWED_CLASS];
+  vvass_xclassification class_list[MAX_ALLOWED_CLASS];
 };
 
 /* Get y and uv color components corresponding to givne RGB color */
@@ -104,7 +104,7 @@ convert_rgb_to_yuv_clrs (color clr, unsigned char *y, unsigned short *uv)
   return;
 }
 
-static void DrawReID( IVASFrame *inframe, ivas_xoverlaypriv *kpriv,
+static void DrawReID( VVASFrame *inframe, vvas_xoverlaypriv *kpriv,
   int xmin, int xmax, int ymin, int ymax, uint64_t lable,
   Mat& lumaImg, Mat& chromaImg)
 {
@@ -113,7 +113,7 @@ static void DrawReID( IVASFrame *inframe, ivas_xoverlaypriv *kpriv,
   sprintf(label_s, "%lu", lable);
   std::string label_string(label_s);
 
-  if (inframe->props.fmt == IVAS_VFMT_Y_UV8_420)
+  if (inframe->props.fmt == VVAS_VFMT_Y_UV8_420)
   {
     unsigned char yScalar;
     unsigned short uvScalar;
@@ -170,11 +170,11 @@ static void DrawReID( IVASFrame *inframe, ivas_xoverlaypriv *kpriv,
 
 extern "C"
 {
-  int32_t xlnx_kernel_init (IVASKernel * handle)
+  int32_t xlnx_kernel_init (VVASKernel * handle)
   {
-    ivas_xoverlaypriv *kpriv =
-        (ivas_xoverlaypriv *) malloc (sizeof (ivas_xoverlaypriv));
-    memset (kpriv, 0, sizeof (ivas_xoverlaypriv));
+    vvas_xoverlaypriv *kpriv =
+        (vvas_xoverlaypriv *) malloc (sizeof (vvas_xoverlaypriv));
+    memset (kpriv, 0, sizeof (vvas_xoverlaypriv));
 
     json_t *jconfig = handle->kernel_config;
     json_t *val, *karray = NULL, *classes = NULL;
@@ -303,10 +303,10 @@ extern "C"
     return 0;
   }
 
-  uint32_t xlnx_kernel_deinit (IVASKernel * handle)
+  uint32_t xlnx_kernel_deinit (VVASKernel * handle)
   {
     LOG_MESSAGE (LOG_LEVEL_DEBUG, "enter");
-    ivas_xoverlaypriv *kpriv = (ivas_xoverlaypriv *) handle->kernel_priv;
+    vvas_xoverlaypriv *kpriv = (vvas_xoverlaypriv *) handle->kernel_priv;
 
     if (kpriv)
       free (kpriv);
@@ -315,13 +315,13 @@ extern "C"
   }
 
 
-  uint32_t xlnx_kernel_start (IVASKernel * handle, int start,
-      IVASFrame * input[MAX_NUM_OBJECT], IVASFrame * output[MAX_NUM_OBJECT])
+  uint32_t xlnx_kernel_start (VVASKernel * handle, int start,
+      VVASFrame * input[MAX_NUM_OBJECT], VVASFrame * output[MAX_NUM_OBJECT])
   {
-    IVASFrame *inframe = input[0];
-    ivas_xoverlaypriv *kpriv = (ivas_xoverlaypriv *)handle->kernel_priv;
+    VVASFrame *inframe = input[0];
+    vvas_xoverlaypriv *kpriv = (vvas_xoverlaypriv *)handle->kernel_priv;
 
-    if (inframe->props.fmt == IVAS_VFMT_Y_UV8_420)
+    if (inframe->props.fmt == VVAS_VFMT_Y_UV8_420)
     {
       LOG_MESSAGE(LOG_LEVEL_DEBUG, "Input frame is in NV12 format\n");
       Mat lumaImg(input[0]->props.height, input[0]->props.stride, CV_8UC1, (char *)inframe->vaddr[0]);
@@ -332,7 +332,7 @@ extern "C"
                                                             gst_inference_meta_api_get_type()));
       if (infer_meta == NULL)
       {
-          LOG_MESSAGE(LOG_LEVEL_INFO, "ivas meta data is not available for crop");
+          LOG_MESSAGE(LOG_LEVEL_INFO, "vvas meta data is not available for crop");
           return false;
       }
 
@@ -370,7 +370,7 @@ extern "C"
     }
   }
 
-  int32_t xlnx_kernel_done (IVASKernel * handle)
+  int32_t xlnx_kernel_done (VVASKernel * handle)
   {
     LOG_MESSAGE (LOG_LEVEL_DEBUG, "enter");
     return 0;

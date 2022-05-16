@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include <gst/ivas/gstinferencemeta.h>
-#include <ivas/ivas_kernel.h>
+#include <gst/vvas/gstinferencemeta.h>
+#include <vvas/vvas_kernel.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -64,29 +64,28 @@ struct _roi {
 };
 
 #define MAX_CHANNELS 40
-typedef struct _ivas_ms_roi {
+typedef struct _vvas_ms_roi {
     uint32_t nobj;
     struct _roi roi[MAX_CHANNELS];
-} ivas_ms_roi;
+} vvas_ms_roi;
 
-static int parse_rect(IVASKernel * handle, int start,
-      IVASFrame * input[MAX_NUM_OBJECT], IVASFrame * output[MAX_NUM_OBJECT],
-      ivas_ms_roi &roi_data
+static int parse_rect(VVASKernel * handle, int start,
+      VVASFrame * input[MAX_NUM_OBJECT], VVASFrame * output[MAX_NUM_OBJECT],
+      vvas_ms_roi &roi_data
       )
 {
-    IVASFrame *inframe = input[0];
+    VVASFrame *inframe = input[0];
     GstInferenceMeta *infer_meta = ((GstInferenceMeta *)gst_buffer_get_meta((GstBuffer *)
                                                               inframe->app_priv,
                                                           gst_inference_meta_api_get_type()));
+    roi_data.nobj = 0;
     if (infer_meta == NULL)
     {
-        printf("No inference info for ReID.");
-        return false;
+        return 0;
     }
 
     GstInferencePrediction *root = infer_meta->prediction;
 
-    roi_data.nobj = 0;
     /* Iterate through the immediate child predictions */
     GSList *tmp = gst_inference_prediction_get_children(root);
     for (GSList *child_predictions = tmp;
@@ -120,7 +119,7 @@ static int parse_rect(IVASKernel * handle, int start,
 }
 
 extern "C" {
-int32_t xlnx_kernel_init(IVASKernel *handle) {
+int32_t xlnx_kernel_init(VVASKernel *handle) {
   json_t *jconfig = handle->kernel_config;
   json_t *val; /* kernel config from app */
 
@@ -167,16 +166,16 @@ int32_t xlnx_kernel_init(IVASKernel *handle) {
   return 0;
 }
 
-uint32_t xlnx_kernel_deinit(IVASKernel *handle) {
+uint32_t xlnx_kernel_deinit(VVASKernel *handle) {
   ReidKernelPriv *kernel_priv = (ReidKernelPriv *)handle->kernel_priv;
   free(kernel_priv);
   return 0;
 }
 
-int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
-                          IVASFrame *input[MAX_NUM_OBJECT],
-                          IVASFrame *output[MAX_NUM_OBJECT]) {
-  IVASFrame *in_ivas_frame = input[0];
+int32_t xlnx_kernel_start(VVASKernel *handle, int start /*unused */,
+                          VVASFrame *input[MAX_NUM_OBJECT],
+                          VVASFrame *output[MAX_NUM_OBJECT]) {
+  VVASFrame *in_vvas_frame = input[0];
   ReidKernelPriv *kernel_priv = (ReidKernelPriv *)handle->kernel_priv;
   if ( !kernel_priv->det.get() || !kernel_priv->tracker.get() ) {
     return 1;
@@ -187,7 +186,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
   std::vector<vitis::ai::ReidTracker::InputCharact> input_characts;
   /* get metadata from input */
 
-  ivas_ms_roi roi_data;
+  vvas_ms_roi roi_data;
   parse_rect(handle, start, input, output, roi_data);
 
   m__TIC__(getfeat);
@@ -202,7 +201,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
 
       GstVideoMeta *vmeta = gst_buffer_get_video_meta(buffer);
       if (!vmeta) {
-        printf("ERROR: IVAS REID: video meta not present in buffer");
+        printf("ERROR: VVAS REID: video meta not present in buffer");
       } else if (vmeta->width == 80 && vmeta->height == 176) {
         char *indata = (char *)info.data;
         cv::Mat image(vmeta->height, vmeta->width, CV_8UC3, indata);
@@ -222,7 +221,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
                        roi.y_cord + roi.height, roi.prob);
         }
       } else {
-        printf("ERROR: IVAS REID: Invalid resolution for reid (%u x %u)\n",
+        printf("ERROR: VVAS REID: Invalid resolution for reid (%u x %u)\n",
                vmeta->width, vmeta->height);
       }
       gst_buffer_unmap(buffer, &info);
@@ -269,7 +268,7 @@ int32_t xlnx_kernel_start(IVASKernel *handle, int start /*unused */,
   return 0;
 }
 
-int32_t xlnx_kernel_done(IVASKernel *handle) {
+int32_t xlnx_kernel_done(VVASKernel *handle) {
   /* dummy */
   return 0;
 }

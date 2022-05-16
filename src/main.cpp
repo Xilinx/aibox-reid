@@ -147,7 +147,7 @@ main (int argc, char *argv[])
       return 1;
     }
 
-    std::string confdir("/opt/xilinx/share/ivas/aibox-reid");
+    std::string confdir("/opt/xilinx/share/vvas/aibox-reid");
     char pip[12500];
     pip[0] = '\0';
 
@@ -258,15 +258,15 @@ main (int argc, char *argv[])
                 ! %sparse ! queue ! omx%sdec \
                 ! video/x-raw, format=NV12 %s %s \
                 ! tee name=t%d t%d.src_0 ! queue \
-                ! ivas_xmultisrc kconfig=\"%s/ped_pp.json\" \
-                ! queue ! ivas_xfilter name=refinedet_%d kernels-config=\"%s/refinedet.json\" \
-                ! queue ! ivas_xfilter name=crop_%d      kernels-config=\"%s/crop.json\" \
-                ! queue ! ivas_xfilter kernels-config=\"%s/reid.json\" \
-                ! queue ! scalem%d.sink_master ivas_xmetaaffixer name=scalem%d scalem%d.src_master \
+                ! vvas_xmultisrc kconfig=\"%s/ped_pp.json\" \
+                ! queue ! vvas_xfilter name=refinedet_%d kernels-config=\"%s/refinedet.json\" \
+                ! queue ! vvas_xfilter name=crop_%d      kernels-config=\"%s/crop.json\" \
+                ! queue ! vvas_xfilter kernels-config=\"%s/reid.json\" \
+                ! queue ! scalem%d.sink_master vvas_xmetaaffixer name=scalem%d scalem%d.src_master \
                 ! fakesink \
                 t%d.src_1 \
                 ! queue ! scalem%d.sink_slave_0 scalem%d.src_slave_0 \
-                ! queue ! ivas_xfilter kernels-config=\"%s/draw_reid.json\" \
+                ! queue ! vvas_xfilter kernels-config=\"%s/draw_reid.json\" \
                 ! queue %s "
                 , srcOss.str().c_str()
                 , srcenc, srcenc
@@ -317,7 +317,7 @@ main (int argc, char *argv[])
     }
     else
     {
-        printf("Error: No valid input source.\n", pip);
+        printf("Error: No valid input source.\n");
     }
     return 0;
 }

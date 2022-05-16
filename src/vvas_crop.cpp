@@ -23,8 +23,8 @@
 #include <thread>
 extern "C"
 {
-#include <ivas/ivas_kernel.h>
-#include <gst/ivas/gstinferencemeta.h>
+#include <vvas/vvas_kernel.h>
+#include <gst/vvas/gstinferencemeta.h>
 }
 
 enum
@@ -71,10 +71,10 @@ struct _roi {
 	GstInferencePrediction *prediction;
 };
 
-typedef struct _ivas_ms_roi {
+typedef struct _vvas_ms_roi {
     uint32_t nobj;
     struct _roi roi[MAX_CHANNELS];
-} ivas_ms_roi;
+} vvas_ms_roi;
 
 
 static uint32_t xlnx_multiscaler_align(uint32_t stride_in, uint16_t AXIMMDataWidth) {
@@ -88,30 +88,57 @@ static uint32_t xlnx_multiscaler_align(uint32_t stride_in, uint16_t AXIMMDataWid
 using namespace std;
 using namespace cv;
 
+static inline GstVideoFormat
+get_gst_format (VVASVideoFormat kernel_fmt)
+{
+  switch (kernel_fmt) {
+    case VVAS_VFMT_Y8:
+      return GST_VIDEO_FORMAT_GRAY8;
+    case VVAS_VFMT_Y_UV8_420:
+      return GST_VIDEO_FORMAT_NV12;
+    case VVAS_VFMT_BGR8:
+      return GST_VIDEO_FORMAT_BGR;
+    case VVAS_VFMT_RGB8:
+      return GST_VIDEO_FORMAT_RGB;
+    case VVAS_VFMT_YUYV8:
+      return GST_VIDEO_FORMAT_YUY2;
+    case VVAS_VFMT_RGBX10:
+      return GST_VIDEO_FORMAT_r210;
+    case VVAS_VFMT_YUV8:
+      return GST_VIDEO_FORMAT_v308;
+    case VVAS_VFMT_Y10:
+      return GST_VIDEO_FORMAT_GRAY10_LE32;
+    case VVAS_VFMT_ABGR8:
+      return GST_VIDEO_FORMAT_ABGR;
+    case VVAS_VFMT_ARGB8:
+      return GST_VIDEO_FORMAT_ARGB;
+    default:
+      GST_ERROR ("Not supporting kernel format %d yet", kernel_fmt);
+      return GST_VIDEO_FORMAT_UNKNOWN;
+  }
+}
+
 static int Crop_one_bgr(
-    IVASKernel *handle,
-    IVASFrame *input[MAX_NUM_OBJECT],
-    const ivas_ms_roi& roi_data,
+    VVASKernel *handle,
+    VVASFrame *input[MAX_NUM_OBJECT],
+    const vvas_ms_roi& roi_data,
     const Mat& bgrImg,
     int ind
 )
 {
-    IVASFrameProps out_props = {0, };
+    VVASFrameProps out_props = {0, };
     out_props.width = 80;
     out_props.height = 176;
-    out_props.fmt = IVAS_VFMT_BGR8;
+    out_props.fmt = VVAS_VFMT_BGR8;
     uint32_t size = FRAME_SIZE(out_props.width, out_props.height);
 
-    IVASFrame *out_ivas_frame = ivas_alloc_buffer(handle, size, IVAS_FRAME_MEMORY, &out_props);
-    if (!out_ivas_frame)
-    {
-        printf("ERROR: IVAS MS: failed to allocate frame memory");
-        return 0;
-    }
-    else
+    GstBuffer *newBuf = gst_buffer_new_allocate(NULL, size, NULL);
+    gst_buffer_add_video_meta (newBuf, GST_VIDEO_FRAME_FLAG_NONE,
+        get_gst_format (out_props.fmt), out_props.width, out_props.height);
+
     {
         {
-            roi_data.roi[ind].prediction->sub_buffer = (GstBuffer*)out_ivas_frame->app_priv;
+            roi_data.roi[ind].prediction->sub_buffer = newBuf;
             {
                 cv::Rect ROI(roi_data.roi[ind].x_cord, roi_data.roi[ind].y_cord,
                               roi_data.roi[ind].width, roi_data.roi[ind].height);
@@ -119,25 +146,22 @@ static int Crop_one_bgr(
                 cv::Mat subbgr = bgrImg(ROI);
 
                 GstMapInfo info;
-                gst_buffer_map((GstBuffer *)out_ivas_frame->app_priv, &info, GST_MAP_WRITE);
+                gst_buffer_map(newBuf, &info, GST_MAP_WRITE);
                 char *indata = (char *)info.data;
                 cv::Mat subbgrResize(out_props.height, out_props.width, CV_8UC3, indata);
                 resize(subbgr, subbgrResize, subbgrResize.size());
 
-                gst_buffer_unmap((GstBuffer *)out_ivas_frame->app_priv, &info);
+                gst_buffer_unmap(newBuf, &info);
             }
-            out_ivas_frame->app_priv = NULL;
         }
-        ivas_free_buffer(handle, out_ivas_frame);
-        out_ivas_frame = NULL;
         return 0;
     }
 }
 
 static int Crop_range_bgr(
-    IVASKernel *handle,
-    IVASFrame *input[MAX_NUM_OBJECT],
-    const ivas_ms_roi& roi_data,
+    VVASKernel *handle,
+    VVASFrame *input[MAX_NUM_OBJECT],
+    const vvas_ms_roi& roi_data,
     const Mat& bgrImg,
     int start, int stop
 )
@@ -177,19 +201,19 @@ Thread(int numThread, int start, int stop, std::function<void(int, int)> func )
     }
 }
 
-static int xlnx_multiscaler_descriptor_create (IVASKernel *handle,
-    IVASFrame *input[MAX_NUM_OBJECT], IVASFrame *output[MAX_NUM_OBJECT],
-    const ivas_ms_roi& roi_data)
+static int xlnx_multiscaler_descriptor_create (VVASKernel *handle,
+    VVASFrame *input[MAX_NUM_OBJECT], VVASFrame *output[MAX_NUM_OBJECT],
+    const vvas_ms_roi& roi_data)
 {
-    IVASFrameProps out_props = {0, };
+    VVASFrameProps out_props = {0, };
 
-    IVASFrame *in_ivas_frame = input[0];
+    VVASFrame *in_vvas_frame = input[0];
 
-    if (in_ivas_frame->props.fmt == IVAS_VFMT_BGR8)
+    if (in_vvas_frame->props.fmt == VVAS_VFMT_BGR8)
     {
     LOG_MESSAGE(LOG_LEVEL_DEBUG, "Input frame is in BGR8 format\n");
 
-    Mat bgrImg(input[0]->props.height, input[0]->props.width, CV_8UC3, (char *)in_ivas_frame->vaddr[0]);
+    Mat bgrImg(input[0]->props.height, input[0]->props.width, CV_8UC3, (char *)in_vvas_frame->vaddr[0]);
     Crop_range_bgr(
         handle,
         input,
@@ -199,31 +223,31 @@ static int xlnx_multiscaler_descriptor_create (IVASKernel *handle,
     }
     else
     {
-        LOG_MESSAGE(LOG_LEVEL_WARNING, "Unsupported color format %d \n", in_ivas_frame->props.fmt);
+        LOG_MESSAGE(LOG_LEVEL_WARNING, "Unsupported color format %d \n", in_vvas_frame->props.fmt);
         return 0;
     }
     return 0;
 }
 
 
-static int parse_rect(IVASKernel * handle, int start,
-      IVASFrame * input[MAX_NUM_OBJECT], IVASFrame * output[MAX_NUM_OBJECT],
-      ivas_ms_roi &roi_data
+static int parse_rect(VVASKernel * handle, int start,
+      VVASFrame * input[MAX_NUM_OBJECT], VVASFrame * output[MAX_NUM_OBJECT],
+      vvas_ms_roi &roi_data
       )
 {
-    IVASFrame *inframe = input[0];
+    VVASFrame *inframe = input[0];
     GstInferenceMeta *infer_meta = ((GstInferenceMeta *)gst_buffer_get_meta((GstBuffer *)
                                                               inframe->app_priv,
                                                           gst_inference_meta_api_get_type()));
+    roi_data.nobj = 0;
     if (infer_meta == NULL)
     {
-        LOG_MESSAGE(LOG_LEVEL_INFO, "ivas meta data is not available for crop");
+        LOG_MESSAGE(LOG_LEVEL_INFO, "vvas meta data is not available for crop");
         return false;
     }
 
     GstInferencePrediction *root = infer_meta->prediction;
 
-    roi_data.nobj = 0;
     /* Iterate through the immediate child predictions */
     GSList *collects = gst_inference_prediction_get_children(root);
     for ( GSList *child_predictions = collects; child_predictions;
@@ -256,12 +280,12 @@ extern "C"
 {
 
 
-int32_t xlnx_kernel_start (IVASKernel *handle, int start /*unused */,
-        IVASFrame *input[MAX_NUM_OBJECT], IVASFrame *output[MAX_NUM_OBJECT])
+int32_t xlnx_kernel_start (VVASKernel *handle, int start /*unused */,
+        VVASFrame *input[MAX_NUM_OBJECT], VVASFrame *output[MAX_NUM_OBJECT])
 {
     int ret;
     uint32_t value = 0;
-    ivas_ms_roi roi_data;
+    vvas_ms_roi roi_data;
     parse_rect(handle, start, input, output, roi_data);
    /* set descriptor */
     xlnx_multiscaler_descriptor_create (handle, input, output, roi_data);
@@ -269,18 +293,18 @@ int32_t xlnx_kernel_start (IVASKernel *handle, int start /*unused */,
     return 0;
 }
 
-int32_t xlnx_kernel_init (IVASKernel *handle)
+int32_t xlnx_kernel_init (VVASKernel *handle)
 {
     handle->is_multiprocess = 1;        
     return 0;
 }
 
-uint32_t xlnx_kernel_deinit (IVASKernel *handle)
+uint32_t xlnx_kernel_deinit (VVASKernel *handle)
 {
     return 0;
 }
 
-int32_t xlnx_kernel_done(IVASKernel *handle)
+int32_t xlnx_kernel_done(VVASKernel *handle)
 {
     /* dummy */
     return 0;

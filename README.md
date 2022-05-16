@@ -166,7 +166,7 @@ The examples show the capability of the aibox-reid for specific configurations. 
       |----------|-------------|
       |aibox-reid| main app|
 
-  * Configuration file directory: /opt/xilinx/share/ivas/aibox-reid
+  * Configuration file directory: /opt/xilinx/share/vvas/aibox-reid
 
       | filename | description |
       |-|-|

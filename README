@@ -169,7 +169,7 @@
         |-------------|-------------|
         |aibox-reid   | main app    |
 
-    * Configuration file directory: /opt/xilinx/share/ivas/aibox-reid
+    * Configuration file directory: /opt/xilinx/share/vvas/aibox-reid
 
         | filename         | description                                  |
         |------------------|----------------------------------------------|
