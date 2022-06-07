@@ -40,7 +40,7 @@ target_include_directories(vvas_reid PRIVATE reidtracker/include/)
 set_target_properties(vvas_reid PROPERTIES INSTALL_RPATH "/opt/xilinx/lib")
 target_link_libraries(vvas_reid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS} jansson vitis_ai_library-reid aa2_reidtracker gstvvasinfermeta-1.0 glog pthread
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} jansson vitis_ai_library-reid aa2_reidtracker gstvvasinfermeta-2.0 glog pthread
   )
 install(TARGETS vvas_reid DESTINATION ${INSTALL_PATH}/lib)
 add_dependencies(vvas_reid aa2_reidtracker)
@@ -49,21 +49,21 @@ add_library(vvas_crop SHARED src/vvas_crop.cpp)
 target_include_directories(vvas_crop PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(vvas_crop
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS} jansson vvasutil gstvvasinfermeta-1.0 glog)
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS} jansson vvasutil-2.0 gstvvasinfermeta-2.0 glog)
 install(TARGETS vvas_crop DESTINATION ${INSTALL_PATH}/lib)
 
 add_library(vvas_drawreid SHARED src/vvas_drawreid.cpp)
 target_include_directories(vvas_drawreid PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(vvas_drawreid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
-  glib-2.0 gobject-2.0 ${OpenCV_LIBS}  jansson vvasutil gstvvasinfermeta-1.0)
+  glib-2.0 gobject-2.0 ${OpenCV_LIBS}  jansson vvasutil-2.0 gstvvasinfermeta-2.0)
 install(TARGETS vvas_drawreid DESTINATION ${INSTALL_PATH}/lib)
 
 
 add_library(vvas_pedpp SHARED src/vvas_pedpp.c)
 target_include_directories(vvas_pedpp PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_link_libraries(vvas_pedpp
-  jansson vvasutil gstvvasinfermeta-1.0)
+  jansson vvasutil-2.0 gstvvasinfermeta-2.0)
 install(TARGETS vvas_pedpp DESTINATION ${INSTALL_PATH}/lib)
 
 add_executable(${CMAKE_PROJECT_NAME} src/main.cpp)
