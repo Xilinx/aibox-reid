@@ -1,6 +1,6 @@
 {
   "xclbin-location":"/lib/firmware/xilinx/kv260-aibox-reid/kv260-aibox-reid.xclbin",
-  "vvas-library-repo": "/opt/xilinx/lib",
+  "vvas-library-repo": "/opt/xilinx/kv260-aibox-reid/lib",
   "element-mode": "transform",
   "kernels": [
     {

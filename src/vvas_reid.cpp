@@ -33,7 +33,7 @@
 #define DEFAULT_REID_THRESHOLD 0.2
 #define DEFAULT_REID_DEBUG     0
 #define DEFAULT_MODEL_NAME     "personreid-res18_pt"
-#define DEFAULT_MODEL_PATH     "/opt/xilinx/share/vitis_ai_library/models/kv260-aibox-reid"
+#define DEFAULT_MODEL_PATH     "/opt/xilinx/kv260-aibox-reid/share/vitis_ai_library/models"
 
 using namespace std;
 

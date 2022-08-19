@@ -1,12 +1,12 @@
 {
   "xclbin-location": "/usr/lib/dpu.xclbin",
-  "vvas-library-repo": "/opt/xilinx/lib/",
+  "vvas-library-repo": "/opt/xilinx/kv260-aibox-reid/lib/",
   "element-mode": "passthrough",
   "kernels": [
     {
       "library-name": "libvvas_reid.so",
       "config": {
-          "model-path": "/opt/xilinx/share/vitis_ai_library/models/kv260-aibox-reid/",
+          "model-path": "/opt/xilinx/kv260-aibox-reid/share/vitis_ai_library/models/",
           "model-name": "personreid-res18_pt",
           "debug": 0
       }

@@ -29,7 +29,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(GStreamer REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS opencv_core opencv_video opencv_videoio opencv_imgproc opencv_imgcodecs opencv_highgui)
 
-SET(INSTALL_PATH "opt/xilinx")
+SET(INSTALL_PATH "opt/xilinx/kv260-aibox-reid")
 
 
 add_subdirectory(reidtracker)
@@ -37,7 +37,7 @@ add_subdirectory(reidtracker)
 add_library(vvas_reid SHARED src/vvas_reid.cpp src/common.hpp)
 target_include_directories(vvas_reid PRIVATE ${GSTREAMER_INCLUDE_DIRS})
 target_include_directories(vvas_reid PRIVATE reidtracker/include/)
-set_target_properties(vvas_reid PROPERTIES INSTALL_RPATH "/opt/xilinx/lib")
+set_target_properties(vvas_reid PROPERTIES INSTALL_RPATH ${INSTALL_PATH}/lib)
 target_link_libraries(vvas_reid
   gstapp-1.0 gstreamer-1.0 gstbase-1.0 gobject-2.0 glib-2.0 gstvideo-1.0 gstallocators-1.0 gstrtsp-1.0 gstrtspserver-1.0
   glib-2.0 gobject-2.0 ${OpenCV_LIBS} jansson vitis_ai_library-reid aa2_reidtracker gstvvasinfermeta-2.0 glog pthread
@@ -89,11 +89,16 @@ install(FILES
     config/crop.json
     config/reid.json
     config/draw_reid.json
-    DESTINATION ${INSTALL_PATH}/share/vvas/${CMAKE_PROJECT_NAME})
+    DESTINATION ${INSTALL_PATH}/share/vvas/)
+
+install(DIRECTORY
+    models/kv260/personreid-res18_pt
+	models/kv260/refinedet_pruned_0_96
+    DESTINATION ${INSTALL_PATH}/share/vitis_ai_library/models)
 
 install(DIRECTORY
     notebook/
-    DESTINATION ${INSTALL_PATH}/share/notebooks/${CMAKE_PROJECT_NAME}/)
+    DESTINATION ${INSTALL_PATH}/share/notebooks/)
 
 set(VERSION "1.0.1")
 set(CPACK_PACKAGE_VERSION ${VERSION})

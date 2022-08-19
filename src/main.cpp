@@ -147,7 +147,7 @@ main (int argc, char *argv[])
       return 1;
     }
 
-    std::string confdir("/opt/xilinx/share/vvas/aibox-reid");
+    std::string confdir("/opt/xilinx/kv260-aibox-reid/share/vvas");
     char pip[12500];
     pip[0] = '\0';
 
