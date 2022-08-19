@@ -108,7 +108,7 @@ Output example:
 
 > Currently running servers:
 >
-> `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: /opt/xilinx/share/notebooks
+> `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: /home/petalinux/notebooks
 
 ### Command Line
 
@@ -176,10 +176,19 @@ The examples show the capability of the aibox-reid for specific configurations. 
       | reid.json        |           Config of reid.
       | draw_reid.json   |           Config of final results drawing.
 
+  * Configuration File Directory: /opt/xilinx/kv260-aibox-reid/share/vitis_ai_library/models
+    
+      The model files integrated in the application use the B3136 DPU configuration.
+
+      | foldername | description |
+      |----------|-------------|
+      |personreid-res18_pt | Model files for reid|
+      |refinedet_pruned_0_96| Model files for refinedet| 	  
+
    * Jupyter Notebook Directory: /opt/xilinx/share/notebooks/aibox-reid
 
      | filename | description |
      |----------|-------------|
      |aibox-reid.ipynb | Jupyter notebook file for aibox-reid.|
 
-<p align="center"><sup>Copyright&copy; 2021 Xilinx</sup></p>
+<p align="center"><sup>Copyright&copy; 2022 Xilinx</sup></p>
