@@ -11,7 +11,9 @@ If you want to cross compile the source in Linux PC machine, follow these steps,
 
 # Setting up the Board
 
-1. Get the SD Card Image from [Boot Image Site](http://xilinx.com/) and follow the instructions in UG1089 to burn the SD card. And install the SD card to J11.
+1. Get the SD Card Image from [Boot Image Site](https://xilinx.github.io/kria-apps-docs/2021.1/build/html/index.html) and follow the instructions in UG1089 to burn the SD card. And install the SD card to J11.
+
+This guide and prebuilt is target for Ubuntu and 22.1. The previious version of this application (21.1) which is targeted to Petalinux is still available [online](https://xilinx.github.io/kria-apps-docs/2021.1/build/html/index.html).
 
 2. Hardware Setup:
 
@@ -29,39 +31,153 @@ If you want to cross compile the source in Linux PC machine, follow these steps,
     
       Connect the Ethernet cable to your local network with DHCP enabled to install packages and run Jupyter Notebooks
  
-3. Power on the board, login with username `petalinux`, and you need to setup the password for the first time bootup.
+3. Power on the board, and booting your Starter Kit (Ubuntu):
 
-4.  Get the latest application package.
+   * Follow the instruction from the page below to boot linux
 
-    1.  Get the list of available packages in the feed.
+  	https://www.xilinx.com/products/som/kria/kr260-robotics-starter-kit/kr260-getting-started/booting-your-starter-kit.html
 
-        `sudo xmutil      getpkgs`
+> **Note:** Steps under the section "Set up the Xilinx Development & Demonstration Environment for Ubuntu 22.04 LTS" may not be needed for TSN-ROS demo.
 
-    2.  Install the package with dnf install:
+4. Set System Timezone and locale:
 
-        `sudo dnf install packagegroup-kv260-aibox-reid.noarch`
-        
-      Note: For setups without access to the internet, it is possible to download and use the packages locally. Please refer to the `K260 SOM Starter Kit Tutorial` for instructions.
+    * Set timezone
 
-5.  Dynamically load the application package.
+       ```bash
+		sudo timedatectl set-ntp true
+		sudo timedatectl set-timezone America/Los_Angeles
+		timedatectl
+       ```
+	
+	* Set locale
 
-    The firmware consist of bitstream, device tree overlay (dtbo) and xclbin file. The firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used for that purpose.
+       ```bash
+		sudo locale-gen en_US en_US.UTF-8
+		sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+		export LANG=en_US.UTF-8
+		locale
+       ```
 
-    1. Shows the list and status of available acceleration platforms and AI Applications:
+5. Update Bootfirmware
 
-        `sudo xmutil      listapps`
+The SOM Starter Kits have factory pre-programmed boot firmware that is installed and maintained in the SOM QSPI device. Update the Boot firmware in the SOM QSPI device to '2022.1 Boot FW' Image.
 
-    2.  Switch to a different platform for different AI Application:
+Follow the link below to obtain Boot firmware binary and instructions to update QSPI image using xmutil, after linux boot.  
 
-        *  When xmutil listapps reveals that no accelerator is currently active, select the desired application:
+https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/1641152513/Kria+K26+SOM#Boot-Firmware-Updates
 
-            `sudo xmutil      loadapp kv260-aibox-reid`
+6. Install Docker from [here]{https://docs.docker.com/engine/install/ubuntu/}
 
-        *  When xmutil listapps reveals that an accellerator is already active, unload it first, then select the desired application:
+7. Get the latest kv260-aibox-reid firmware package:
 
-            `sudo xmutil      unloadapp `
+	* Add archive for the Xilinx Apps demo
 
-            `sudo xmutil      loadapp kv260-aibox-reid`
+      ```bash
+      sudo add-apt-repository ppa:xilinx-apps
+      sudo apt update
+      sudo apt upgrade
+      ```
+
+	* Search package feed for packages compatible with Kv260
+
+      ```bash
+      sudo xmutil getpkgs
+      ```
+
+      An example output is show below
+
+      ```bash
+      Searching package feed for packages compatible with: kv260
+
+      xlnx-app-kv260-aibox-reid/jammy 0.0.20220621.4729324-0xlnx3 arm64 demo application for Xilinx boards - kv260 aibox-reid application
+      xlnx-app-kv260-aibox-reid/jammy 0.1-0xlnx1 arm64
+      ```
+
+	* Install firmware binaries and restart dfx-mgr
+
+       ```bash
+      sudo apt install xlnx-firmware-kv260-aibox-reid
+      sudo systemctl restart dfx-mgr.service
+      ```
+
+      > Note : Installing firmware binaries (xlnx-firmware-kv260-aibox-reid) causes dfx-mgr to crash and a restart is needed, which is listed in the known issues section. Once this is fixed an newer updates are available for dfx-manager, restart may not be needed.
+  
+8. Dynamically load the application package:
+
+    The firmware consist of bitstream, device tree overlay (dtbo) file. The firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used for that purpose.
+
+    * Disable the desktop environment:
+
+       ```bash
+       sudo xmutil      desktop_disable
+       ```
+
+       After running the application, the desktop environment can be enable again with:
+
+       ```bash
+       sudo xmutil      desktop_enable
+       ```
+
+    * Show the list and status of available acceleration platforms :
+
+       ```bash
+      sudo xmutil listapps
+        ```
+
+   * Switch to a different platform for different AI Application:
+
+      * When xmutil listapps reveals that no accelerator is currently active, just activate kv260-aibox-reid:
+
+         ```
+         sudo xmutil      dp_unbind
+         sudo xmutil      loadapp kv260-aibox-reid
+         sudo xmutil      dp_bind
+         ```
+
+      * When xmutil listapps reveals that there's already another accelerator being activated apart from kv260-aibox-reid, unload it first, then switch to kv260-aibox-reid.
+
+         ```
+         sudo xmutil      dp_unbind
+         sudo xmutil      unloadapp
+         sudo xmutil      loadapp kv260-aibox-reid
+         sudo xmutil      dp_bind
+         ```
+
+9. Pull the latest docker image for aibox-reid using the below command.
+
+    ```bash
+    docker pull xilinx/aibox-reid:latest
+    ```
+
+10. Launch the docker using the below command
+
+    ```bash
+    docker run \
+    --env="DISPLAY" \
+    -h "xlnx-docker" \
+    --env="XDG_SESSION_TYPE" \
+    --net=host \
+    --privileged \
+    --volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
+    -v /tmp:/tmp \
+    -v /dev:/dev \
+    -v /sys:/sys \
+    -v /etc/vart.conf:/etc/vart.conf \
+    -v /lib/firmware/xilinx:/lib/firmware/xilinx \
+    -v /run:/run \
+    -it xilinx/aibox-reid:latest bash
+    ```
+
+    It will launch the aibox-reid image in a new container
+
+    ```bash
+    root@xlnx-docker/#
+    ```
+11. The storage volume on the SD card is limited with multiple dockers. You can use following command to remove the existing container.
+
+	```
+    sudo docker rmi --force aibox-reid
+	```
 
 # How to run the application:
 
@@ -69,67 +185,145 @@ If you want to cross compile the source in Linux PC machine, follow these steps,
 
 The AIBOX application is targeted to run with RTSP streams as input source, but for convienience, we also support video files as input.
 
-We assume the RTSP or video file to be **1080P H264/H265**
+We assume the RTSP or video file to be **1080P H264/H265 30FPS**. AIBOX application can adjust for other FPS with -r flag, but resolution must be 1080p. 
 
-   * RTSP source <a name="rtsp-source"> </a>
-   
-     IP camerars normally have a configuration page to configure the RTSP stream related parameters. Please refer to the manual of your camera, and configure it to **1080P H264/H265**, and get the RTSP URL to be used as input parameter for the AIBox application. The URL is in the form of "rtsp://user:passwd@ip-address:port/name"
+* RTSP source <a name="rtsp-source"> </a>
 
+  * IP Camera
 
-   * File source
+    IP cameras normally have a configuration page to configure the RTSP stream related parameters. Please refer to the manual of your camera, and configure it to **1080P H264/H265 30FPS**, and get the RTSP URL to be used as input parameter for the AIBox application. The URL is in the form of "rtsp://user:passwd@ip-address:port/name"
 
-      To demonstrate the application in the case where no IP camera is available, a video source may be played from a file on the SD card instead.
-      You can download video files from the following links, which is of MP4 format.
+  * VLC player
 
-      * https://pixabay.com/videos/liverpool-people-couple-pier-head-46090/
-      * https://pixabay.com/videos/liverpool-pier-head-england-uk-46098/
-      * https://pixabay.com/videos/spring-walk-park-trees-flowers-15252/
-      * https://pixabay.com/videos/walking-people-city-bucharest-6099/
+    Alternatively, you can use VLC in windows to setup RTSP Streaming server. You must first turn off any firewalls (McAfee, etc) and VPN, and make sure your windows machine is on the same subnet as SOM board. In the folder with vlc.exe (typically C:\Program Files\VideoLAN\VLC), do a shift-rightclick and select "Open PowerShell window here". In PowerShell window, enter
 
-      Then you need to transcode it to H264 file which is the supported input format.
+    ```
+    > .\vlc.exe -vvv path_to_a_mp4_file --sout '#rtp{dst=windows_ip_address,port=1234,sdp=rtsp://windows_ip_address/test.sdp}' --loop
+    ```
 
-      > ffmpeg -i input-video.mp4 -c:v libx264 -pix_fmt nv12 -r 30 output.nv12.h264
+* File source
 
-      Finally, please upload or copy these transcoded H264 files to the board, place it to somewhere under /home/petalinux, which is the home directory of the user you login as.
+  To demonstrate the application in the case where no IP camera is available, a video source may be played from a file on the SD card instead.
+
+  You can download video files from the following links, which is of MP4 format.
+
+  * https://pixabay.com/videos/liverpool-people-couple-pier-head-46090/
+  * https://pixabay.com/videos/liverpool-pier-head-england-uk-46098/
+  * https://pixabay.com/videos/spring-walk-park-trees-flowers-15252/
+  * https://pixabay.com/videos/walking-people-city-bucharest-6099/
+
+  Then you need to transcode it to H264 file which is the supported input format.
+
+  ```
+  ffmpeg -i input-video.mp4 -c:v libx264 -pix_fmt nv12 -vf scale=1920:1080 -r 30 output.nv12.h264
+  ```
+
+  Finally, upload or copy these transcoded H264 files to the board, place it to somewhere under /tmp.
 
 ## Interacting with the application
 
-There are two ways to interact with application, via Jyputer notebook or Command line 
+There are two ways to interact with application, via Jupyuter notebook or Command line
 
-### Juypter notebook
+### Jupyter notebook
 
-Use a web-browser (e.g. Chrome, Firefox) to interact with the platform.
+* User need to run following command to install the package shipped notebooks which reside in `/opt/xilinx/kv260-aibox-reid/share/notebooks` to the folder `$root/notebooks/aibox-reid`.
 
-The Jupyter notebook URL can be found with command:
+  ``` $ aibox-reid-install.py ```
 
-> sudo jupyter notebook list
+  This script also provides more options to install the notebook of current application to specified location.
+
+```
+    usage: aibox-reid-install [-h] [-d DIR] [-f]
+
+    Script to copy aibox-reid Jupyter notebook to user directory
+
+    optional arguments:
+      -h, --help         show this help message and exit
+      -d DIR, --dir DIR  Install the Jupyter notebook to the specified directory.
+      -f, --force        Force to install the Jupyter notebook even if the destination directory exists.
+```
+
+* Please get the list of running Jupyter servers with command:
+
+    ```$ jupyter-server list ```
+
+  Output example:
+
+  > Currently running servers:
+  >
+  > `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: /root/notebooks/aibox-reid
+
+* Stop the currently running server with command:
+
+    ```$ jupyter-server stop 8888 ```
+
+* To launch Jupyter notebook on the target, run below command.
+
+``` bash
+    python3 /usr/local/bin/jupyter-lab --notebook-dir=/root/notebooks/aibox-reid --allow-root --ip=ip-address &
+
+    // fill in ip-address from ifconfig 
+```
 
 Output example:
 
-> Currently running servers:
->
-> `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: /home/petalinux/notebooks
+``` bash
+[I 2022-09-05 10:26:26.644 LabApp] JupyterLab extension loaded from /usr/local/lib/python3.10/dist-packages/jupyterlab
+[I 2022-09-05 10:26:26.644 LabApp] JupyterLab application directory is /usr/local/share/jupyter/lab
+[I 2022-09-05 10:26:26.664 ServerApp] jupyterlab | extension was successfully loaded.
+[I 2022-09-05 10:26:26.683 ServerApp] nbclassic | extension was successfully loaded.
+[I 2022-09-05 10:26:26.685 ServerApp] Serving notebooks from local directory: /root/notebooks/aibox-reid
+[I 2022-09-05 10:26:26.685 ServerApp] Jupyter Server 1.18.1 is running at:
+[I 2022-09-05 10:26:26.685 ServerApp] http://192.168.1.233:8888/lab?token=385858bbf1e5541dbba08d811bcac67d805b051ef37c6211
+[I 2022-09-05 10:26:26.686 ServerApp]  or http://127.0.0.1:8888/lab?token=385858bbf1e5541dbba08d811bcac67d805b051ef37c6211
+[I 2022-09-05 10:26:26.686 ServerApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[W 2022-09-05 10:26:26.702 ServerApp] No web browser found: could not locate runnable browser.
+[C 2022-09-05 10:26:26.703 ServerApp]
+
+    To access the server, open this file in a browser:
+        file:///root/.local/share/jupyter/runtime/jpserver-40-open.html
+    Or copy and paste one of these URLs:
+        http://192.168.1.233:8888/lab?token=385858bbf1e5541dbba08d811bcac67d805b051ef37c6211
+     or http://127.0.0.1:8888/lab?token=385858bbf1e5541dbba08d811bcac67d805b051ef37c6211
+```
+
+* User can access the server by opening the server URL from previous steps with the Chrome browser.
+
+  In the notebook, we will construct the GStreamer pipeline string, you can get it by adding simple python code to print it out, and played with gst-launch-1.0 command in the console, and there are some user options variables that can be changed and run with. For other parts of the pipeline, you can also change and play to see the effect easily.
+
+**Note:** [Known limitation](issue-aib.md#notebook-one-channel)
 
 ### Command Line
 
-**Note** The application needs to be run with ***sudo*** .
+**Note:** The application needs to be run with ***sudo*** .
 
 #### Examples:
 
-   * Run one channel RTSP stream 
-      > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 0 
+* Run one channel RTSP stream
 
-   * Run one channel video file
-      > sudo aibox-reid -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
+    > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 0
 
-   * Run multiple channels
-     > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 2 -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1 
+  or
 
-   **Note** Only one instance of aibox-reid application can run at a time because it requires exclusive access to a DPU engine and there is only one instance of DPU that exists in the aibox-reid platform.
+    > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port](#rtsp-source) -t rtsp -p 0
+
+  or (for windows VLC server setup):
+
+    > sudo aibox-reid -s rtsp://windows_ip_address:1234/test.sdp -t rtsp -p 0
+
+* Run one channel video file
+
+    > sudo aibox-reid -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
+
+* Run multiple channels
+
+  > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 2 -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
+
+**Note:**: Only one instance of aibox-reid application can run at a time because it requires exclusive access to a DPU engine and there is only one instance of DPU that exists in the aibox-reid platform.
 
 #### Command Options:
 
-The examples show the capability of the aibox-reid for specific configurations. User can get more and detailed application options as following by invoking 
+The examples show the capability of the aibox-reid for specific configurations. User can get more and detailed application options as following by invoking
 
 `   aibox-reid --help`
 
@@ -149,8 +343,8 @@ The examples show the capability of the aibox-reid for specific configurations. 
 
         -s, --src=[rtsp://server:port/id |file path]     URI of rtsp src, or location of h264|h265 video file. Must set. Can set up to 4 times
         -t, --srctype=[f|file, r|rtsp]                   Type of the input source: file (f)|rtsp (r). Optional. Can set up to 4 times.
-        -e, --srcenc=[h264|h265]                         Encoding type of the input source. Optional. Can set up to 4 times.
-        -p, --pos=[0|1|2|3]                              Location of the display in the 4 grids of 4k monitor. Optional. 
+        -e, --srcenc=[h264|h265]                         Encoding type of the input source. Optional and defaults to h264. Can set up to 4 times.
+        -p, --pos=[0|1|2|3]                              Location of the display in the 4 grids of 4k monitor. Optional.
                                                          0: top left, 1: top right, 2: bottom left, 3: bottom right. Optional. Can set up to 4 times.
         -r, --framerate                                  Framerate of the input. Optional. Can set up to 4 times.
         -R, --report                                     Report fps

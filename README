@@ -15,7 +15,9 @@
 
 2. Setting up the Board
 
-    1. Get the SD Card Image from (http://xilinx.com/) and follow the instructions in UG1089 to burn the SD card. And install the SD card to J11.
+	1. Get the SD Card Image from [Boot Image Site](https://xilinx.github.io/kria-apps-docs/2021.1/build/html/index.html) and follow the instructions in UG1089 to burn the SD card. And install the SD card to J11.
+
+	This guide and prebuilt is target for Ubuntu and 22.1. The previious version of this application (21.1) which is targeted to Petalinux is still available (https://xilinx.github.io/kria-apps-docs/2021.1/build/html/index.html).
 
     2. Hardware Setup:
 
@@ -33,39 +35,153 @@
 
           Connect the Ethernet cable to your local network with DHCP enabled to install packages and run Jupyter Notebooks
 
-    3. Power on the board, login with username `petalinux`, and you need to setup the password for the first time bootup.
+	3. Power on the board, and booting your Starter Kit (Ubuntu):
 
-    4.  Get the latest application package.
+	   * Follow the instruction from the page below to boot linux
 
-        1.  Get the list of available packages in the feed.
+		https://www.xilinx.com/products/som/kria/kr260-robotics-starter-kit/kr260-getting-started/booting-your-starter-kit.html
 
-            `sudo xmutil      getpkgs`
+	> **Note:** Steps under the section "Set up the Xilinx Development & Demonstration Environment for Ubuntu 22.04 LTS" may not be needed for TSN-ROS demo.
 
-        2.  Install the package with dnf install:
+	4. Set System Timezone and locale:
 
-            `sudo dnf install packagegroup-kv260-aibox-reid.noarch`
+		* Set timezone
 
-          Note: For setups without access to the internet, it is possible to download and use the packages locally. Please refer to the `K260 SOM Starter Kit Tutorial` for instructions.
+		   ```bash
+			sudo timedatectl set-ntp true
+			sudo timedatectl set-timezone America/Los_Angeles
+			timedatectl
+		   ```
+		
+		* Set locale
 
-    5.  Dynamically load the application package.
+		   ```bash
+			sudo locale-gen en_US en_US.UTF-8
+			sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+			export LANG=en_US.UTF-8
+			locale
+		   ```
 
-        The firmware consist of bitstream, device tree overlay (dtbo) and xclbin file. The firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used for that purpose.
+	5. Update Bootfirmware
 
-        1. Shows the list and status of available acceleration platforms and AI Applications:
+	The SOM Starter Kits have factory pre-programmed boot firmware that is installed and maintained in the SOM QSPI device. Update the Boot firmware in the SOM QSPI device to '2022.1 Boot FW' Image.
 
-            `sudo xmutil      listapps`
+	Follow the link below to obtain Boot firmware binary and instructions to update QSPI image using xmutil, after linux boot.  
 
-        2.  Switch to a different platform for different AI Application:
+	https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/1641152513/Kria+K26+SOM#Boot-Firmware-Updates
 
-            *  When xmutil listapps reveals that no accelerator is currently active, select the desired application:
+	6. Install Docker from [here]{https://docs.docker.com/engine/install/ubuntu/}
 
-                `sudo xmutil      loadapp kv260-aibox-reid`
+	7. Get the latest kv260-aibox-reid firmware package:
 
-            *  When xmutil listapps reveals that an accellerator is already active, unload it first, then select the desired application:
+		* Add archive for the Xilinx Apps demo
 
-                `sudo xmutil      unloadapp `
+		  ```bash
+		  sudo add-apt-repository ppa:xilinx-apps
+		  sudo apt update
+		  sudo apt upgrade
+		  ```
 
-                `sudo xmutil      loadapp kv260-aibox-reid`
+		* Search package feed for packages compatible with Kv260
+
+		  ```bash
+		  sudo xmutil getpkgs
+		  ```
+
+		  An example output is show below
+
+		  ```bash
+		  Searching package feed for packages compatible with: kv260
+
+		  xlnx-app-kv260-aibox-reid/jammy 0.0.20220621.4729324-0xlnx3 arm64 demo application for Xilinx boards - kv260 aibox-reid application
+		  xlnx-app-kv260-aibox-reid/jammy 0.1-0xlnx1 arm64
+		  ```
+
+		* Install firmware binaries and restart dfx-mgr
+
+		   ```bash
+		  sudo apt install xlnx-firmware-kv260-aibox-reid
+		  sudo systemctl restart dfx-mgr.service
+		  ```
+
+		  > Note : Installing firmware binaries (xlnx-firmware-kv260-aibox-reid) causes dfx-mgr to crash and a restart is needed, which is listed in the known issues section. Once this is fixed an newer updates are available for dfx-manager, restart may not be needed.
+	  
+	8. Dynamically load the application package:
+
+		The firmware consist of bitstream, device tree overlay (dtbo) file. The firmware is loaded dynamically on user request once Linux is fully booted. The xmutil utility can be used for that purpose.
+
+		* Disable the desktop environment:
+
+		   ```bash
+		   sudo xmutil      desktop_disable
+		   ```
+
+		   After running the application, the desktop environment can be enable again with:
+
+		   ```bash
+		   sudo xmutil      desktop_enable
+		   ```
+
+		* Show the list and status of available acceleration platforms :
+
+		   ```bash
+		  sudo xmutil listapps
+			```
+
+	   * Switch to a different platform for different AI Application:
+
+		  * When xmutil listapps reveals that no accelerator is currently active, just activate kv260-aibox-reid:
+
+			 ```
+			 sudo xmutil      dp_unbind
+			 sudo xmutil      loadapp kv260-aibox-reid
+			 sudo xmutil      dp_bind
+			 ```
+
+		  * When xmutil listapps reveals that there's already another accelerator being activated apart from kv260-aibox-reid, unload it first, then switch to kv260-aibox-reid.
+
+			 ```
+			 sudo xmutil      dp_unbind
+			 sudo xmutil      unloadapp
+			 sudo xmutil      loadapp kv260-aibox-reid
+			 sudo xmutil      dp_bind
+			 ```
+
+	9. Pull the latest docker image for aibox-reid using the below command.
+
+		```bash
+		docker pull xilinx/aibox-reid:latest
+		```
+
+	10. Launch the docker using the below command
+
+		```bash
+		docker run \
+		--env="DISPLAY" \
+		-h "xlnx-docker" \
+		--env="XDG_SESSION_TYPE" \
+		--net=host \
+		--privileged \
+		--volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
+		-v /tmp:/tmp \
+		-v /dev:/dev \
+		-v /sys:/sys \
+		-v /etc/vart.conf:/etc/vart.conf \
+		-v /lib/firmware/xilinx:/lib/firmware/xilinx \
+		-v /run:/run \
+		-it xilinx/aibox-reid:latest bash
+		```
+
+		It will launch the aibox-reid image in a new container
+
+		```bash
+		root@xlnx-docker/#
+		```
+	11. The storage volume on the SD card is limited with multiple dockers. You can use following command to remove the existing container.
+
+		```
+		sudo docker rmi --force aibox-reid
+		```
 
 3. How to run the application:
 
@@ -93,7 +209,7 @@
 
             > ffmpeg -i input-video.mp4 -c:v libx264 -pix_fmt nv12 -r 30 output.nv12.h264
 
-            Finally, please upload or copy these transcoded H264 files to the board, place it to somewhere under /home/petalinux, which is the home directory of the user you login as.
+            Finally, please upload or copy these transcoded H264 files to the board, place it to somewhere under /tmp.
 
     2. Interacting with the application
 
@@ -111,7 +227,7 @@
 
             > Currently running servers:
             >
-            > `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: /home/petalinux/notebooks
+            > `http://ip:port/?token=xxxxxxxxxxxxxxxxxx`  :: 
 
         2. Command Line
 
