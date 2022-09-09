@@ -80,18 +80,25 @@ https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/1641152513/Kria+K26+SOM#Bo
 
 	* Search package feed for packages compatible with Kv260
 
-      ```bash
-      sudo xmutil getpkgs
-      ```
+    ```bash
+		ubuntu@kria:~$ sudo apt search xlnx-firmware-kv260
+		Sorting... Done
+		Full Text Search... Done
+		xlnx-firmware-kv260-aibox-reid/jammy 0.1-0xlnx1 arm64 [installed]
+		 FPGA firmware for Xilinx boards - kv260 aibox-reid application
 
-      An example output is show below
+		xlnx-firmware-kv260-benchmark-b4096/jammy 0.1-0xlnx1 arm64
+		 FPGA firmware for Xilinx boards - kv260 benchmark-b4096 application
 
-      ```bash
-      Searching package feed for packages compatible with: kv260
+		xlnx-firmware-kv260-defect-detect/jammy 0.1-0xlnx1 arm64
+		 FPGA firmware for Xilinx boards - kv260 defect-detect application
 
-      xlnx-app-kv260-aibox-reid/jammy 0.0.20220621.4729324-0xlnx3 arm64 demo application for Xilinx boards - kv260 aibox-reid application
-      xlnx-app-kv260-aibox-reid/jammy 0.1-0xlnx1 arm64
-      ```
+		xlnx-firmware-kv260-nlp-smartvision/jammy,now 0.1-0xlnx1 arm64 
+		 FPGA firmware for Xilinx boards - kv260 nlp-smartvision application
+
+		xlnx-firmware-kv260-smartcam/jammy 0.1-0xlnx1 arm64 
+		 FPGA firmware for Xilinx boards - kv260 smartcam application
+    ```
 
 	* Install firmware binaries and restart dfx-mgr
 
@@ -142,14 +149,20 @@ https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/1641152513/Kria+K26+SOM#Bo
          sudo xmutil      loadapp kv260-aibox-reid
          sudo xmutil      dp_bind
          ```
+9. Enable your user to properly use the docker commands without using sudo for every command. 
 
-9. Pull the latest docker image for aibox-reid using the below command.
+    ```bash
+    sudo groupadd docker
+    sudo usermod -a -G docker  $USER
+	```
+
+10. Pull the latest docker image for aibox-reid using the below command.
 
     ```bash
     docker pull xilinx/aibox-reid:latest
     ```
 
-10. Launch the docker using the below command
+11. Launch the docker using the below command
 
     ```bash
     docker run \
@@ -173,10 +186,10 @@ https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/1641152513/Kria+K26+SOM#Bo
     ```bash
     root@xlnx-docker/#
     ```
-11. The storage volume on the SD card is limited with multiple dockers. You can use following command to remove the existing container.
+12. The storage volume on the SD card is limited with multiple dockers. You can use following command to remove the existing container.
 
 	```
-    sudo docker rmi --force aibox-reid
+    docker rmi --force aibox-reid
 	```
 
 # How to run the application:
@@ -295,29 +308,27 @@ Output example:
 
 ### Command Line
 
-**Note:** The application needs to be run with ***sudo*** .
-
 #### Examples:
 
 * Run one channel RTSP stream
 
-    > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 0
+    > aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 0
 
   or
 
-    > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port](#rtsp-source) -t rtsp -p 0
+    > aibox-reid -s [rtsp://username:passwd@ip_address:port](#rtsp-source) -t rtsp -p 0
 
   or (for windows VLC server setup):
 
-    > sudo aibox-reid -s rtsp://windows_ip_address:1234/test.sdp -t rtsp -p 0
+    > aibox-reid -s rtsp://windows_ip_address:1234/test.sdp -t rtsp -p 0
 
 * Run one channel video file
 
-    > sudo aibox-reid -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
+    > aibox-reid -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
 
 * Run multiple channels
 
-  > sudo aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 2 -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
+  > aibox-reid -s [rtsp://username:passwd@ip_address:port/name](#rtsp-source) -t rtsp -p 2 -s /tmp/movies/shop.nv12.30fps.1080p.h264 -t file -p 1
 
 **Note:**: Only one instance of aibox-reid application can run at a time because it requires exclusive access to a DPU engine and there is only one instance of DPU that exists in the aibox-reid platform.
 
